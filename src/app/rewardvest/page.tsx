@@ -17,7 +17,6 @@ import {
   Bar,
   ReferenceLine,
 } from "recharts";
-import Navbar from "@/components/Navbar";
 import MarketTicker from "@/components/MarketTicker";
 import { USER_CARDS } from "@/lib/userCards";
 
@@ -240,11 +239,14 @@ export default function RewardVestPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      <Navbar />
+    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <div className="px-4 pt-12 pb-3">
+        <span className="text-[10px] font-bold tracking-widest" style={{ color: "#5ac8fa" }}>INVEST</span>
+        <h1 className="text-2xl font-bold text-white mt-1">AI Investment Advisor</h1>
+      </div>
       <MarketTicker data={marketData} />
 
-      <div className="pt-24 pb-16 px-6">
+      <div className="pt-4 pb-6 px-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <motion.div
@@ -636,7 +638,7 @@ export default function RewardVestPage() {
                 className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-orange-400/50"
               >
                 {nqDates.slice().reverse().map(d => (
-                  <option key={d} value={d} className="bg-[#0a0a0f]">{d}</option>
+                  <option key={d} value={d} className="bg-[#0f0f0f]">{d}</option>
                 ))}
               </select>
             </div>

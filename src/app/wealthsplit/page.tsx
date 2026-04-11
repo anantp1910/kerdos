@@ -10,7 +10,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import Navbar from "@/components/Navbar";
 import MarketTicker from "@/components/MarketTicker";
 import { USER_CARDS } from "@/lib/userCards";
 
@@ -99,11 +98,14 @@ export default function WealthSplitPage() {
   const totalPoints   = Object.values(USER_CARDS).reduce((s, c) => s + c.pointsBalance, 0);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      <Navbar />
+    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <div className="px-4 pt-12 pb-3">
+        <span className="text-[10px] font-bold tracking-widest" style={{ color: "#bf5af2" }}>SUMMARY</span>
+        <h1 className="text-2xl font-bold text-white mt-1">Financial Command Center</h1>
+      </div>
       <MarketTicker />
 
-      <div className="pt-24 pb-16 px-6">
+      <div className="pt-4 pb-6 px-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <motion.div
