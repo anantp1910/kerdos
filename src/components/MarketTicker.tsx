@@ -1,9 +1,14 @@
 "use client";
 
-import { STOCK_TICKERS } from "@/lib/mockData";
+import { StockData, STOCK_TICKERS } from "@/lib/mockData";
 
-export default function MarketTicker() {
-  const doubled = [...STOCK_TICKERS, ...STOCK_TICKERS];
+interface MarketTickerProps {
+  data?: StockData[];
+}
+
+export default function MarketTicker({ data }: MarketTickerProps) {
+  const tickers = data && data.length > 0 ? data : STOCK_TICKERS;
+  const doubled = [...tickers, ...tickers];
 
   return (
     <div className="overflow-hidden border-b border-white/5 bg-[#0d0d14] py-2">
