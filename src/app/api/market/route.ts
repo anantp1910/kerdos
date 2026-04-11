@@ -56,10 +56,11 @@ export async function GET() {
     return Response.json({ data: cache.data, cached: true });
   }
 
-  // Fetch all tickers sequentially (Alpha Vantage rate limits parallel calls)
+  // Fetch tickers sequentially with delay (Alpha Vantage free tier: 5 calls/min)
   const results: TickerResult[] = [];
-  for (const ticker of TICKERS) {
-    const result = await fetchQuote(ticker);
+  for (let i = 0; i < TICKERS.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 1500));
+    const result = await fetchQuote(TICKERS[i]);
     if (result) results.push(result);
   }
 
