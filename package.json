@@ -12,6 +12,7 @@
     "claude": "^0.1.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
+    "hyparquet": "^1.25.6",
     "lucide-react": "^1.8.0",
     "next": "16.2.3",
     "openai": "^6.34.0",
