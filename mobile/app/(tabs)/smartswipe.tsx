@@ -11,6 +11,7 @@ import FadeIn from '@/components/FadeIn';
 import { COLORS } from '@/constants/theme';
 import { USER_CARDS } from '@/lib/userCards';
 import { API_BASE } from '@/lib/apiConfig';
+import { getLinkedCardIds } from '@/lib/linkedCards';
 
 const CATEGORIES = [
   { id: 'dining',        label: 'Dining',       icon: '🍽️' },
@@ -48,15 +49,17 @@ function rankCards(cards: ApiCard[], category: string, amount: number): CardResu
 const SPRING = { friction: 6, tension: 300, useNativeDriver: true };
 
 export default function SmartSwipeScreen() {
-  const [cards,       setCards]       = useState<ApiCard[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [amount,      setAmount]      = useState('');
-  const [merchant,    setMerchant]    = useState('');
-  const [category,    setCategory]    = useState('dining');
-  const [results,     setResults]     = useState<CardResult[] | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [cards,         setCards]         = useState<ApiCard[]>([]);
+  const [linkedCardIds, setLinkedCardIds] = useState<string[] | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [amount,        setAmount]        = useState('');
+  const [merchant,      setMerchant]      = useState('');
+  const [category,      setCategory]      = useState('dining');
+  const [results,       setResults]       = useState<CardResult[] | null>(null);
+  const [isAnalyzing,   setIsAnalyzing]   = useState(false);
   const btnScale = useRef(new Animated.Value(1)).current;
 
+  const activeCards = linkedCardIds ? cards.filter(c => linkedCardIds.includes(c.id)) : cards;
   const parsedAmount = parseFloat(amount) || 0;
   const barMax = results ? results[0].score : 1;
 
@@ -66,15 +69,16 @@ export default function SmartSwipeScreen() {
       .then(setCards)
       .catch(() => {})
       .finally(() => setLoading(false));
+    getLinkedCardIds().then(setLinkedCardIds);
   }, []);
 
   const analyze = () => {
-    if (parsedAmount <= 0 || !cards.length) return;
+    if (parsedAmount <= 0 || !activeCards.length) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsAnalyzing(true);
     setResults(null);
     setTimeout(() => {
-      setResults(rankCards(cards, category, parsedAmount));
+      setResults(rankCards(activeCards, category, parsedAmount));
       setIsAnalyzing(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, 700);
@@ -101,7 +105,11 @@ export default function SmartSwipeScreen() {
               </View>
               <Text style={styles.title}>Best Card{'\n'}Recommender</Text>
               <Text style={styles.subtitle}>
-                {loading ? 'Loading live reward rates...' : 'Enter a purchase — we rank every card instantly.'}
+                {loading
+                  ? 'Loading live reward rates...'
+                  : linkedCardIds
+                  ? `Ranking ${activeCards.length} linked card${activeCards.length !== 1 ? 's' : ''} via Plaid`
+                  : 'Enter a purchase — we rank every card instantly.'}
               </Text>
             </View>
           </FadeIn>
@@ -172,11 +180,11 @@ export default function SmartSwipeScreen() {
               onPressIn={() => Animated.spring(btnScale, { toValue: 0.96, ...SPRING }).start()}
               onPressOut={() => Animated.spring(btnScale, { toValue: 1, ...SPRING }).start()}
               onPress={analyze}
-              disabled={parsedAmount <= 0 || isAnalyzing || loading}
+              disabled={parsedAmount <= 0 || isAnalyzing || loading || activeCards.length === 0}
             >
-              <Animated.View style={[styles.analyzeBtn, (parsedAmount <= 0 || loading) && styles.btnDisabled, { transform: [{ scale: btnScale }] }]}>
-                <Text style={[styles.analyzeBtnText, (parsedAmount <= 0 || loading) && styles.btnTextDisabled]}>
-                  {isAnalyzing ? 'Analyzing...' : loading ? 'Loading rates...' : 'Analyze My Cards →'}
+              <Animated.View style={[styles.analyzeBtn, (parsedAmount <= 0 || loading || activeCards.length === 0) && styles.btnDisabled, { transform: [{ scale: btnScale }] }]}>
+                <Text style={[styles.analyzeBtnText, (parsedAmount <= 0 || loading || activeCards.length === 0) && styles.btnTextDisabled]}>
+                  {isAnalyzing ? 'Analyzing...' : loading ? 'Loading rates...' : activeCards.length === 0 ? 'No linked cards' : 'Analyze My Cards →'}
                 </Text>
               </Animated.View>
             </Pressable>

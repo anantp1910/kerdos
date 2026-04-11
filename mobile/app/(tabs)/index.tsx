@@ -4,12 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import HealthOrb from '@/components/HealthOrb';
 import CreditCard, { type CreditCard as CreditCardType } from '@/components/CreditCard';
 import FadeIn from '@/components/FadeIn';
 import { COLORS } from '@/constants/theme';
 import { USER_CARDS } from '@/lib/userCards';
 import { API_BASE } from '@/lib/apiConfig';
+import { setLinkedCards, getLinkedCardIds, type LinkedCardMapping } from '@/lib/linkedCards';
 
 const CATEGORY_ICONS: Record<string, string> = {
   dining:        '🍽️',
@@ -56,6 +59,7 @@ function FeatureCard({ emoji, title, sub, accent, dim, onPress }: typeof FEATURE
 export default function HomeScreen() {
   const router = useRouter();
   const [cards, setCards] = useState<CreditCardType[]>([]);
+  const [linkedCardIds, setLinkedCardIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/rewards`)
@@ -72,7 +76,30 @@ export default function HomeScreen() {
         setCards(merged);
       })
       .catch(() => {});
+    // Load linked cards from storage
+    getLinkedCardIds().then(setLinkedCardIds);
   }, []);
+
+  const handleConnectPlaid = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await WebBrowser.openAuthSessionAsync(
+      `${API_BASE}/plaid-link`,
+      'cardiq://'
+    );
+    if (result.type === 'success') {
+      const parsed = Linking.parse(result.url);
+      const param = parsed.queryParams?.cardIds;
+      const cardIds = typeof param === 'string' && param ? param.split(',') : [];
+      if (cardIds.length > 0) {
+        const mappings: LinkedCardMapping[] = cardIds.map(id => ({
+          plaidAccountId: id, plaidName: id, plaidMask: '0000', cardId: id,
+        }));
+        await setLinkedCards(mappings);
+        setLinkedCardIds(cardIds);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    }
+  };
 
   const totalPoints   = Object.values(USER_CARDS).reduce((s, c) => s + c.pointsBalance, 0);
   const totalCashback = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
@@ -89,7 +116,9 @@ export default function HomeScreen() {
           </View>
           <View style={styles.liveRow}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveText}>5 cards active</Text>
+            <Text style={styles.liveText}>
+              {linkedCardIds ? `${linkedCardIds.length} card${linkedCardIds.length !== 1 ? 's' : ''} linked` : '5 cards active'}
+            </Text>
           </View>
         </FadeIn>
 
@@ -152,7 +181,15 @@ export default function HomeScreen() {
 
         {/* Cards carousel */}
         <FadeIn delay={300} style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Cards</Text>
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>Your Cards</Text>
+            <Pressable
+              onPress={handleConnectPlaid}
+              style={styles.connectBtn}
+            >
+              <Text style={styles.connectBtnText}>+ Connect</Text>
+            </Pressable>
+          </View>
         </FadeIn>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardScroll}>
           {cards.map(card => <CreditCard key={card.id} card={card} width={200} />)}
@@ -219,6 +256,9 @@ const styles = StyleSheet.create({
   featureTitle: { fontSize: 14, fontWeight: '800' },
   featureSub: { fontSize: 10, color: COLORS.textMuted, lineHeight: 14 },
   featureArrow: { fontSize: 16, fontWeight: '700', marginTop: 6 },
+  sectionRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  connectBtn:     { borderWidth: 1, borderColor: COLORS.green, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  connectBtnText: { fontSize: 11, color: COLORS.green, fontWeight: '700' },
   cardScroll: { paddingHorizontal: 20, gap: 12, paddingBottom: 4, paddingTop: 4 },
   txRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.bgCard, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: COLORS.border, gap: 12 },
   txIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' },

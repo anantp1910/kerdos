@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PlaidApi, PlaidEnvironments, Configuration } from 'plaid';
+import { PlaidApi, PlaidEnvironments, Configuration, Products } from 'plaid';
 
 const client = new PlaidApi(
   new Configuration({
@@ -39,7 +39,7 @@ export async function GET() {
   try {
     const { data: { public_token } } = await client.sandboxPublicTokenCreate({
       institution_id: 'ins_109508',
-      initial_products: ['transactions'],
+      initial_products: [Products.Transactions],
     });
 
     const { data: { access_token } } = await client.itemPublicTokenExchange({

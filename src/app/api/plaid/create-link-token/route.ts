@@ -18,7 +18,7 @@ export async function POST() {
     const res = await client.linkTokenCreate({
       user:           { client_user_id: 'user-sandbox' },
       client_name:    'CardIQ',
-      products:       [Products.Auth],
+      products:       [Products.Transactions],
       country_codes:  [CountryCode.Us],
       language:       'en',
     });

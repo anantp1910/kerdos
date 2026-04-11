@@ -4,36 +4,36 @@ import { useState, useEffect, useCallback } from "react";
 import { usePlaidLink } from "react-plaid-link";
 import { setLinkedCards, type LinkedCardMapping } from "@/lib/linkedCards";
 
-const CARD_OPTIONS = [
-  { value: "amex-gold",       label: "Amex Gold" },
-  { value: "chase-sapphire",  label: "Chase Sapphire Preferred" },
-  { value: "citi-double",     label: "Citi Double Cash" },
-  { value: "discover-it",     label: "Discover it Cash Back" },
-  { value: "capital-venture", label: "Capital One Venture" },
-];
-
-type PlaidAccount = {
-  account_id: string;
-  name:       string;
-  mask:       string;
-  subtype:    string | null;
-  type:       string;
-};
+// The JSON to paste as the password in Plaid Link (user_custom)
+const SANDBOX_PASSWORD = JSON.stringify({
+  override_accounts: [
+    { type: "credit", subtype: "credit card", starting_balance: 2400, meta: { name: "Amex Gold",        official_name: "American Express Gold Rewards Card", mask: "4800" } },
+    { type: "credit", subtype: "credit card", starting_balance: 1850, meta: { name: "Sapphire Reserve",  official_name: "Chase Sapphire Reserve Visa",        mask: "3500" } },
+    { type: "credit", subtype: "credit card", starting_balance:  730, meta: { name: "Double Cash",       official_name: "Citi Double Cash World Mastercard",  mask: "2700" } },
+    { type: "credit", subtype: "credit card", starting_balance:  310, meta: { name: "Discover it",       official_name: "Discover it Cash Back Rewards",      mask: "9200" } },
+    { type: "credit", subtype: "credit card", starting_balance: 1200, meta: { name: "Venture Rewards",   official_name: "Capital One Venture Rewards Visa",   mask: "6100" } },
+  ],
+});
 
 type Props = {
   onComplete: (mappings: LinkedCardMapping[]) => void;
 };
 
 export default function PlaidConnect({ onComplete }: Props) {
-  const [linkToken,     setLinkToken]     = useState<string | null>(null);
-  const [plaidAccounts, setPlaidAccounts] = useState<PlaidAccount[] | null>(null);
-  const [mappings,      setMappings]      = useState<Record<string, string>>({});
-  const [modalOpen,     setModalOpen]     = useState(false);
-  const [fetching,      setFetching]      = useState(false);
-  const [exchanging,    setExchanging]    = useState(false);
-  const [error,         setError]         = useState<string | null>(null);
+  const [linkToken,  setLinkToken]  = useState<string | null>(null);
+  const [fetching,   setFetching]   = useState(false);
+  const [exchanging, setExchanging] = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+  const [showCreds,  setShowCreds]  = useState(false);
+  const [copied,     setCopied]     = useState<"user" | "pass" | null>(null);
 
-  // Exchange public token after Plaid Link succeeds
+  const copy = (text: string, which: "user" | "pass") => {
+    navigator.clipboard.writeText(text);
+    setCopied(which);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  // After Plaid Link succeeds — exchange token, auto-match cards, save
   const onSuccess = useCallback(async (public_token: string) => {
     setExchanging(true);
     setError(null);
@@ -45,23 +45,28 @@ export default function PlaidConnect({ onComplete }: Props) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Exchange failed");
-      setPlaidAccounts(data.accounts);
-      setModalOpen(true);
+
+      const mappings: LinkedCardMapping[] = data.mappings;
+      if (mappings.length > 0) {
+        setLinkedCards(mappings);
+        onComplete(mappings);
+      } else {
+        setError("No recognisable cards found — make sure you used user_custom with the JSON password.");
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to fetch accounts");
     } finally {
       setExchanging(false);
-      setLinkToken(null); // reset so next click fetches a fresh token
+      setLinkToken(null);
     }
-  }, []);
+  }, [onComplete]);
 
   const { open, ready } = usePlaidLink({
-    token:     linkToken ?? "",
+    token:  linkToken ?? "",
     onSuccess,
-    onExit:    () => { setFetching(false); setLinkToken(null); },
+    onExit: () => { setFetching(false); setLinkToken(null); },
   });
 
-  // Open Plaid Link as soon as token is ready
   useEffect(() => {
     if (linkToken && ready) {
       open();
@@ -83,134 +88,76 @@ export default function PlaidConnect({ onComplete }: Props) {
     }
   };
 
-  const handleSave = () => {
-    if (!plaidAccounts) return;
-    const result: LinkedCardMapping[] = plaidAccounts
-      .filter(a => mappings[a.account_id])
-      .map(a => ({
-        plaidAccountId: a.account_id,
-        plaidName:      a.name,
-        plaidMask:      a.mask,
-        cardId:         mappings[a.account_id],
-      }));
-    if (result.length === 0) return;
-    setLinkedCards(result);
-    onComplete(result);
-    setModalOpen(false);
-    setPlaidAccounts(null);
-    setMappings({});
-  };
-
-  const handleSkip = () => {
-    setModalOpen(false);
-    setPlaidAccounts(null);
-    setMappings({});
-  };
-
-  const allMapped = plaidAccounts
-    ? plaidAccounts.every(a => mappings[a.account_id])
-    : false;
-
   return (
-    <>
-      {/* Connect button */}
-      <button
-        onClick={handleConnect}
-        disabled={fetching || exchanging}
-        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-400/30 text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-      >
-        {fetching || exchanging ? (
-          <>
-            <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            {exchanging ? "Fetching cards..." : "Opening Plaid..."}
-          </>
-        ) : (
-          <>
-            <span className="text-green-400">🔗</span>
-            Connect Cards via Plaid
-          </>
-        )}
-      </button>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Connect button */}
+        <button
+          onClick={handleConnect}
+          disabled={fetching || exchanging}
+          className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-400/30 text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {fetching || exchanging ? (
+            <>
+              <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              {exchanging ? "Linking cards..." : "Opening Plaid..."}
+            </>
+          ) : (
+            <>
+              <span className="text-green-400">🔗</span>
+              Connect Cards via Plaid
+            </>
+          )}
+        </button>
 
-      {error && (
-        <p className="text-xs text-red-400 mt-1">{error}</p>
-      )}
+        {/* Toggle credentials hint */}
+        <button
+          onClick={() => setShowCreds(v => !v)}
+          className="text-xs text-white/30 hover:text-white/60 transition-colors underline underline-offset-2"
+        >
+          {showCreds ? "hide" : "test credentials"}
+        </button>
+      </div>
 
-      {/* Mapping modal */}
-      {modalOpen && plaidAccounts && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={handleSkip}
-          />
+      {/* Credentials panel */}
+      {showCreds && (
+        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/8 max-w-sm space-y-3">
+          <p className="text-[10px] font-bold text-white/30 tracking-widest">PLAID SANDBOX CREDENTIALS</p>
 
-          {/* Modal */}
-          <div className="relative w-full max-w-md bg-[#0d0d14] border border-white/10 rounded-2xl p-6 shadow-2xl">
-            {/* Header */}
-            <div className="mb-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                <span className="text-[10px] font-bold text-green-400 tracking-widest">PLAID CONNECTED</span>
-              </div>
-              <h2 className="text-xl font-bold text-white">Map Your Cards</h2>
-              <p className="text-sm text-white/40 mt-1">
-                Plaid found {plaidAccounts.length} credit account{plaidAccounts.length !== 1 ? "s" : ""}. Tell us which is which.
-              </p>
-            </div>
-
-            {/* Account rows */}
-            <div className="space-y-4 mb-6">
-              {plaidAccounts.length === 0 ? (
-                <p className="text-sm text-white/40 text-center py-4">
-                  No credit accounts found. Try a different institution.
-                </p>
-              ) : (
-                plaidAccounts.map(account => (
-                  <div key={account.account_id} className="p-4 rounded-xl bg-white/[0.03] border border-white/8">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">{account.name}</p>
-                        <p className="text-xs text-white/40">••••{account.mask}</p>
-                      </div>
-                      <span className="text-[10px] bg-white/5 text-white/40 px-2 py-1 rounded-full capitalize">
-                        {account.subtype ?? "credit"}
-                      </span>
-                    </div>
-                    <select
-                      value={mappings[account.account_id] ?? ""}
-                      onChange={e => setMappings(prev => ({ ...prev, [account.account_id]: e.target.value }))}
-                      className="w-full bg-[#0a0a0f] border border-white/10 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-green-400/50 transition-colors"
-                    >
-                      <option value="" disabled>Select a card...</option>
-                      {CARD_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
+          {/* Username */}
+          <div>
+            <p className="text-[10px] text-white/30 mb-1">USERNAME</p>
+            <div className="flex items-center justify-between gap-2 bg-black/30 rounded-lg px-3 py-2">
+              <code className="text-xs text-green-400">user_custom</code>
               <button
-                onClick={handleSave}
-                disabled={!allMapped || plaidAccounts.length === 0}
-                className="flex-1 py-3 rounded-xl bg-green-400 hover:bg-green-300 text-black font-bold text-sm transition-all duration-200 disabled:bg-white/5 disabled:text-white/20 disabled:cursor-not-allowed"
+                onClick={() => copy("user_custom", "user")}
+                className="text-[10px] text-white/30 hover:text-white/60 transition-colors"
               >
-                Save & Start SmartSwiping →
-              </button>
-              <button
-                onClick={handleSkip}
-                className="px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/50 text-sm transition-all duration-200"
-              >
-                Skip
+                {copied === "user" ? "✓ copied" : "copy"}
               </button>
             </div>
           </div>
+
+          {/* Password */}
+          <div>
+            <p className="text-[10px] text-white/30 mb-1">PASSWORD (paste entire JSON)</p>
+            <div className="flex items-start justify-between gap-2 bg-black/30 rounded-lg px-3 py-2">
+              <code className="text-[10px] text-white/40 break-all leading-relaxed line-clamp-2">
+                {"{"}override_accounts:[...]{"}"}
+              </code>
+              <button
+                onClick={() => copy(SANDBOX_PASSWORD, "pass")}
+                className="text-[10px] text-white/30 hover:text-white/60 transition-colors whitespace-nowrap ml-2"
+              >
+                {copied === "pass" ? "✓ copied" : "copy"}
+              </button>
+            </div>
+            <p className="text-[10px] text-white/20 mt-1">Contains: Amex Gold, Chase Sapphire, Citi Double Cash, Discover it, Capital One Venture</p>
+          </div>
         </div>
       )}
-    </>
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
   );
 }
