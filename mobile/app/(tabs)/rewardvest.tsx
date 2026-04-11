@@ -7,10 +7,35 @@ import DonutChart from '@/components/DonutChart';
 import AnimatedBar from '@/components/AnimatedBar';
 import FadeIn from '@/components/FadeIn';
 import { COLORS } from '@/constants/theme';
-import { CARDS, STOCK_TICKERS, PORTFOLIO_SPLIT, MONTHLY_DATA } from '@/lib/mockData';
+import { USER_CARDS } from '@/lib/userCards';
+import { API_BASE } from '@/lib/apiConfig';
+
+const STOCK_TICKERS = [
+  { ticker: 'VOO',  name: 'Vanguard S&P 500',   price: 498.32, changePct:  0.65 },
+  { ticker: 'QQQ',  name: 'Invesco Nasdaq 100',  price: 432.18, changePct:  1.27 },
+  { ticker: 'SPY',  name: 'SPDR S&P 500',        price: 521.67, changePct:  0.56 },
+  { ticker: 'VTI',  name: 'Vanguard Total Mkt',  price: 242.53, changePct: -0.36 },
+  { ticker: 'ARKK', name: 'ARK Innovation',      price: 47.83,  changePct:  2.62 },
+  { ticker: 'BND',  name: 'Vanguard Bond',       price: 73.14,  changePct: -0.16 },
+];
+
+const PORTFOLIO_SPLIT = [
+  { name: 'VOO',          pct: 60, color: '#4ade80', desc: 'Vanguard S&P 500 ETF'  },
+  { name: 'QQQ',          pct: 25, color: '#60a5fa', desc: 'Invesco Nasdaq 100'    },
+  { name: 'Cash Reserve', pct: 15, color: '#a78bfa', desc: 'High-yield savings'    },
+];
+
+const MONTHLY_DATA = [
+  { month: 'Nov', rewards: 210, savings: 380 },
+  { month: 'Dec', rewards: 290, savings: 440 },
+  { month: 'Jan', rewards: 245, savings: 390 },
+  { month: 'Feb', rewards: 310, savings: 510 },
+  { month: 'Mar', rewards: 318, savings: 495 },
+  { month: 'Apr', rewards: 340, savings: 520 },
+];
 
 const THIS_MONTH   = 340;
-const TOTAL_EARNED = CARDS.reduce((s, c) => s + c.totalEarned, 0);
+const TOTAL_EARNED = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
 
 const AI_INSIGHTS = [
   'VOO has outperformed 94% of active funds over 10 years — ideal anchor for your rewards.',
@@ -21,10 +46,20 @@ const AI_INSIGHTS = [
 
 const SPRING = { friction: 6, tension: 300, useNativeDriver: true };
 
+type ApiCard = { id: string; cardName: string; cardIssuer: string; cardNetwork: string };
+
 export default function RewardVestScreen() {
   const [portfolioVisible, setPortfolioVisible] = useState(false);
   const [isGenerating,     setIsGenerating]     = useState(false);
   const [insightIdx,       setInsightIdx]        = useState(0);
+  const [apiCards,         setApiCards]          = useState<ApiCard[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/rewards`)
+      .then(r => r.json())
+      .then(setApiCards)
+      .catch(() => {});
+  }, []);
   const btnScale  = useRef(new Animated.Value(1)).current;
   const spinValue = useRef(new Animated.Value(0)).current;
   const spinAnim  = useRef<Animated.CompositeAnimation | null>(null);
@@ -164,18 +199,22 @@ export default function RewardVestScreen() {
         {/* Per-card */}
         <FadeIn delay={380} style={styles.breakdownCard}>
           <Text style={styles.sectionTitle}>Earnings by Card</Text>
-          {CARDS.map((card, i) => (
-            <View key={card.id} style={styles.breakdownRow}>
-              <View style={styles.breakdownLeft}>
-                <Text style={styles.breakdownName}>{card.issuer} {card.name}</Text>
-                <Text style={styles.breakdownLast}>••••{card.last4}</Text>
+          {apiCards.map((card, i) => {
+            const uc = USER_CARDS[card.id];
+            const maxEarned = Math.max(...Object.values(USER_CARDS).map(c => c.totalEarned), 1);
+            return (
+              <View key={card.id} style={styles.breakdownRow}>
+                <View style={styles.breakdownLeft}>
+                  <Text style={styles.breakdownName}>{card.cardIssuer} {card.cardName}</Text>
+                  <Text style={styles.breakdownLast}>••••{uc?.last4 ?? '0000'}</Text>
+                </View>
+                <View style={{ flex: 1, marginHorizontal: 12 }}>
+                  <AnimatedBar progress={(uc?.totalEarned ?? 0) / maxEarned} delay={i * 80} color={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.08)']} height={5} />
+                </View>
+                <Text style={styles.breakdownVal}>${(uc?.totalEarned ?? 0).toLocaleString()}</Text>
               </View>
-              <View style={{ flex: 1, marginHorizontal: 12 }}>
-                <AnimatedBar progress={card.totalEarned / CARDS[0].totalEarned} delay={i * 80} color={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.08)']} height={5} />
-              </View>
-              <Text style={styles.breakdownVal}>${card.totalEarned.toLocaleString()}</Text>
-            </View>
-          ))}
+            );
+          })}
         </FadeIn>
 
         <View style={{ height: 40 }} />

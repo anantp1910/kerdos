@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,49 @@ import BarChart from '@/components/BarChart';
 import AnimatedBar from '@/components/AnimatedBar';
 import FadeIn from '@/components/FadeIn';
 import { COLORS } from '@/constants/theme';
-import { CARDS, GROUP_MEMBERS, GROUP_EXPENSES, BREAKEVEN_CARDS, MONTHLY_DATA } from '@/lib/mockData';
+import { USER_CARDS } from '@/lib/userCards';
+import { API_BASE } from '@/lib/apiConfig';
+
+const GROUP_MEMBERS = [
+  { id: 'u1', name: 'Arjun', initials: 'AJ', owes:  128.5,  cardSuggestion: 'Amex Gold'      },
+  { id: 'u2', name: 'Priya', initials: 'PR', owes: -45.0,   cardSuggestion: 'Chase Sapphire' },
+  { id: 'u3', name: 'Zara',  initials: 'ZK', owes:  92.3,   cardSuggestion: 'Citi Double'    },
+];
+
+const GROUP_EXPENSES = [
+  { id: 'e1', description: 'Dinner at Nobu', total: 386, splits: [
+    { name: 'You',   amount: 128.67, paid: true  },
+    { name: 'Arjun', amount: 128.67, paid: false },
+    { name: 'Priya', amount: 128.66, paid: true  },
+  ]},
+  { id: 'e2', description: 'Airbnb — Miami', total: 1200, splits: [
+    { name: 'You',   amount: 400, paid: true  },
+    { name: 'Arjun', amount: 400, paid: false },
+    { name: 'Zara',  amount: 400, paid: false },
+  ]},
+  { id: 'e3', description: 'Grocery run', total: 142, splits: [
+    { name: 'You',   amount: 47.33, paid: true  },
+    { name: 'Priya', amount: 47.33, paid: false },
+    { name: 'Zara',  amount: 47.34, paid: true  },
+  ]},
+];
+
+const BREAKEVEN_CARDS = [
+  { name: 'Amex Gold',        fee: 250, months: 2.1, pct: 100 },
+  { name: 'Chase Sapphire',   fee: 95,  months: 3.2, pct: 31  },
+  { name: 'Capital Venture',  fee: 95,  months: 2.5, pct: 26  },
+  { name: 'Citi Double Cash', fee: 0,   months: 0,   pct: 100 },
+  { name: 'Discover it',      fee: 0,   months: 0,   pct: 100 },
+];
+
+const MONTHLY_DATA = [
+  { month: 'Nov', rewards: 210, savings: 380 },
+  { month: 'Dec', rewards: 290, savings: 440 },
+  { month: 'Jan', rewards: 245, savings: 390 },
+  { month: 'Feb', rewards: 310, savings: 510 },
+  { month: 'Mar', rewards: 318, savings: 495 },
+  { month: 'Apr', rewards: 340, savings: 520 },
+];
 
 type Tab = 'overview' | 'splits' | 'cards';
 const SPRING = { friction: 7, tension: 300, useNativeDriver: true };
@@ -20,12 +62,22 @@ const NET_ITEMS = [
   { label: 'Signup Bonus',     value: '+$200', color: COLORS.yellow, icon: '🎁' },
 ];
 
-export default function WealthSplitScreen() {
-  const [tab,     setTab]     = useState<Tab>('overview');
-  const [settled, setSettled] = useState<Set<string>>(new Set());
+type ApiCard = { id: string; cardName: string; cardIssuer: string; cardNetwork: string; annualFee: number | null; pointValuation: number | null; rewardRates: Record<string, number> };
 
-  const totalEarned = CARDS.reduce((s, c) => s + c.totalEarned, 0);
-  const totalPoints = CARDS.reduce((s, c) => s + c.pointsBalance, 0);
+export default function WealthSplitScreen() {
+  const [tab,      setTab]     = useState<Tab>('overview');
+  const [settled,  setSettled] = useState<Set<string>>(new Set());
+  const [apiCards, setApiCards] = useState<ApiCard[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/rewards`)
+      .then(r => r.json())
+      .then(setApiCards)
+      .catch(() => {});
+  }, []);
+
+  const totalEarned = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
+  const totalPoints = Object.values(USER_CARDS).reduce((s, c) => s + c.pointsBalance, 0);
 
   const handleSettle = (id: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -201,28 +253,34 @@ export default function WealthSplitScreen() {
         {/* ── CARDS ────────────────────────────────────────── */}
         {tab === 'cards' && (
           <FadeIn delay={0} style={styles.tabContent}>
-            {CARDS.map(card => (
-              <View key={card.id} style={styles.cardDetailRow}>
-                <View style={styles.cardDetailTop}>
-                  <View>
-                    <Text style={styles.cardDetailName}>{card.issuer} {card.name}</Text>
-                    <Text style={styles.cardDetailSub}>••••{card.last4} · {card.network}{card.annualFee === 0 ? ' · No Fee' : ` · $${card.annualFee}/yr`}</Text>
-                  </View>
-                  <Text style={styles.cardDetailEarned}>${card.totalEarned.toLocaleString()}</Text>
-                </View>
-                <View style={styles.rateGrid}>
-                  {Object.entries(card.rewardRates).map(([cat, rate]) => (
-                    <View key={cat} style={styles.rateChip}>
-                      <Text style={styles.rateVal}>{rate}x</Text>
-                      <Text style={styles.rateCat}>{cat}</Text>
+            {apiCards.map(card => {
+              const uc = USER_CARDS[card.id];
+              const fee = card.annualFee ?? 0;
+              const pv  = card.pointValuation ?? 1;
+              const pts = uc?.pointsBalance ?? 0;
+              return (
+                <View key={card.id} style={styles.cardDetailRow}>
+                  <View style={styles.cardDetailTop}>
+                    <View>
+                      <Text style={styles.cardDetailName}>{card.cardIssuer} {card.cardName}</Text>
+                      <Text style={styles.cardDetailSub}>••••{uc?.last4 ?? '0000'} · {card.cardNetwork}{fee === 0 ? ' · No Fee' : ` · $${fee}/yr`}</Text>
                     </View>
-                  ))}
+                    <Text style={styles.cardDetailEarned}>${(uc?.totalEarned ?? 0).toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.rateGrid}>
+                    {Object.entries(card.rewardRates).map(([cat, rate]) => (
+                      <View key={cat} style={styles.rateChip}>
+                        <Text style={styles.rateVal}>{rate}x</Text>
+                        <Text style={styles.rateCat}>{cat}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {pts > 0 && (
+                    <Text style={styles.pointsNote}>{pts.toLocaleString()} pts · ${((pts * pv) / 100).toFixed(0)} value</Text>
+                  )}
                 </View>
-                {card.pointsBalance > 0 && (
-                  <Text style={styles.pointsNote}>{card.pointsBalance.toLocaleString()} pts · ${((card.pointsBalance * card.pointValuation) / 100).toFixed(0)} value</Text>
-                )}
-              </View>
-            ))}
+              );
+            })}
           </FadeIn>
         )}
 

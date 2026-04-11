@@ -1,6 +1,13 @@
 "use client";
 
-import { STOCK_TICKERS } from "@/lib/mockData";
+const STOCK_TICKERS = [
+  { ticker: 'VOO',  name: 'Vanguard S&P 500',   price: 498.32, changePct:  0.65 },
+  { ticker: 'QQQ',  name: 'Invesco Nasdaq 100',  price: 432.18, changePct:  1.27 },
+  { ticker: 'SPY',  name: 'SPDR S&P 500',        price: 521.67, changePct:  0.56 },
+  { ticker: 'VTI',  name: 'Vanguard Total Mkt',  price: 242.53, changePct: -0.36 },
+  { ticker: 'ARKK', name: 'ARK Innovation',      price: 47.83,  changePct:  2.62 },
+  { ticker: 'BND',  name: 'Vanguard Bond',       price: 73.14,  changePct: -0.16 },
+];
 
 export default function MarketTicker() {
   const doubled = [...STOCK_TICKERS, ...STOCK_TICKERS];

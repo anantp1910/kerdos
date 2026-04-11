@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
 export const metadata: Metadata = {
   title: "CardIQ — Your AI-Powered Credit Card Brain",
   description: "Swipe smart, invest smarter, track everything.",

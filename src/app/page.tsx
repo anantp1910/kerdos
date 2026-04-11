@@ -2,10 +2,19 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import MarketTicker from "@/components/MarketTicker";
 import HealthOrb from "@/components/HealthOrb";
-import { CARDS, RECENT_TRANSACTIONS } from "@/lib/mockData";
+import { USER_CARDS } from "@/lib/userCards";
+
+const RECENT_TRANSACTIONS = [
+  { id: 't1', cardId: 'amex-gold',      merchant: 'Nobu Restaurant',  date: 'Apr 10', category: 'dining',        amount: 148.5,  cashback: 11.88 },
+  { id: 't2', cardId: 'amex-gold',      merchant: 'Whole Foods',      date: 'Apr 9',  category: 'groceries',     amount: 89.32,  cashback: 7.15  },
+  { id: 't3', cardId: 'chase-sapphire', merchant: 'Delta Airlines',   date: 'Apr 8',  category: 'travel',        amount: 420.0,  cashback: 43.05 },
+  { id: 't4', cardId: 'discover-it',    merchant: 'Shell Station',    date: 'Apr 7',  category: 'gas',           amount: 62.4,   cashback: 6.24  },
+  { id: 't5', cardId: 'discover-it',    merchant: 'AMC Theaters',     date: 'Apr 6',  category: 'entertainment', amount: 34.0,   cashback: 3.4   },
+];
 
 const FEATURES = [
   {
@@ -54,8 +63,22 @@ const STATS = [
 ];
 
 export default function HomePage() {
-  const totalPoints = CARDS.reduce((s, c) => s + c.pointsBalance, 0);
-  const totalCashback = CARDS.reduce((s, c) => s + c.totalEarned, 0);
+  const [cardNames, setCardNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/rewards")
+      .then(r => r.json())
+      .then((cards: { id: string; cardName: string }[]) => {
+        const map: Record<string, string> = {};
+        cards.forEach(c => { map[c.id] = c.cardName; });
+        setCardNames(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const totalPoints   = Object.values(USER_CARDS).reduce((s, c) => s + c.pointsBalance, 0);
+  const totalCashback = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
+  const cardCount     = Object.keys(USER_CARDS).length;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -156,7 +179,7 @@ export default function HomePage() {
                 </div>
                 <div className="w-px bg-white/10" />
                 <div>
-                  <p className="text-2xl font-bold text-white">{CARDS.length}</p>
+                  <p className="text-2xl font-bold text-white">{cardCount}</p>
                   <p className="text-xs text-white/40 mt-0.5">Linked Cards</p>
                 </div>
               </motion.div>
@@ -268,7 +291,6 @@ export default function HomePage() {
 
           <div className="space-y-2">
             {RECENT_TRANSACTIONS.map((tx, i) => {
-              const card = CARDS.find((c) => c.id === tx.cardId);
               return (
                 <motion.div
                   key={tx.id}
@@ -292,7 +314,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white">{tx.merchant}</p>
-                      <p className="text-xs text-white/40">{tx.date} · {card?.name}</p>
+                      <p className="text-xs text-white/40">{tx.date} · {cardNames[tx.cardId] ?? tx.cardId}</p>
                     </div>
                   </div>
                   <div className="text-right">

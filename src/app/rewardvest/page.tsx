@@ -15,7 +15,16 @@ import {
 } from "recharts";
 import Navbar from "@/components/Navbar";
 import MarketTicker from "@/components/MarketTicker";
-import { CARDS, STOCK_TICKERS } from "@/lib/mockData";
+import { USER_CARDS } from "@/lib/userCards";
+
+const STOCK_TICKERS = [
+  { ticker: 'VOO',  name: 'Vanguard S&P 500',   price: 498.32, changePct:  0.65 },
+  { ticker: 'QQQ',  name: 'Invesco Nasdaq 100',  price: 432.18, changePct:  1.27 },
+  { ticker: 'SPY',  name: 'SPDR S&P 500',        price: 521.67, changePct:  0.56 },
+  { ticker: 'VTI',  name: 'Vanguard Total Mkt',  price: 242.53, changePct: -0.36 },
+  { ticker: 'ARKK', name: 'ARK Innovation',      price: 47.83,  changePct:  2.62 },
+  { ticker: 'BND',  name: 'Vanguard Bond',       price: 73.14,  changePct: -0.16 },
+];
 
 const PORTFOLIO_SPLIT = [
   { name: "VOO", pct: 60, color: "#4ade80", description: "Vanguard S&P 500 ETF" },
@@ -39,12 +48,24 @@ const AI_INSIGHTS = [
   "At your current earning rate of $340/mo, compounding at 7% annual return = $48,200 in 10 years.",
 ];
 
+const COLOR_MAP: Record<string, string> = {
+  amex: '#60a5fa', chase: '#a78bfa', citi: '#22d3ee', discover: '#fb923c', capital: '#4ade80',
+};
+
 export default function RewardVestPage() {
   const [aiInsight, setAiInsight] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
+  const [apiCards, setApiCards] = useState<{ id: string; cardName: string }[]>([]);
 
-  const totalEarned = CARDS.reduce((s, c) => s + c.totalEarned, 0);
+  useEffect(() => {
+    fetch("/api/rewards")
+      .then(r => r.json())
+      .then(setApiCards)
+      .catch(() => {});
+  }, []);
+
+  const totalEarned = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
   const thisMonth = 340;
 
   const handleGenerate = () => {
@@ -348,33 +369,18 @@ export default function RewardVestPage() {
                   Earnings by Card
                 </h3>
                 <div className="space-y-3">
-                  {CARDS.map((card) => (
-                    <div key={card.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{
-                            background:
-                              card.color === "amex"
-                                ? "#60a5fa"
-                                : card.color === "chase"
-                                ? "#a78bfa"
-                                : card.color === "citi"
-                                ? "#22d3ee"
-                                : card.color === "discover"
-                                ? "#fb923c"
-                                : "#4ade80",
-                          }}
-                        />
-                        <span className="text-xs text-white/60 truncate">
-                          {card.name}
-                        </span>
+                  {apiCards.map((card) => {
+                    const uc = USER_CARDS[card.id];
+                    return (
+                      <div key={card.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: COLOR_MAP[uc?.color ?? ''] ?? '#fff' }} />
+                          <span className="text-xs text-white/60 truncate">{card.cardName}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-white">${(uc?.totalEarned ?? 0).toLocaleString()}</span>
                       </div>
-                      <span className="text-xs font-semibold text-white">
-                        ${card.totalEarned.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

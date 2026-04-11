@@ -1,14 +1,32 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import HealthOrb from '@/components/HealthOrb';
-import CreditCard from '@/components/CreditCard';
+import CreditCard, { type CreditCard as CreditCardType } from '@/components/CreditCard';
 import FadeIn from '@/components/FadeIn';
 import { COLORS } from '@/constants/theme';
-import { CARDS, RECENT_TRANSACTIONS, CATEGORY_ICONS } from '@/lib/mockData';
+import { USER_CARDS } from '@/lib/userCards';
+import { API_BASE } from '@/lib/apiConfig';
+
+const CATEGORY_ICONS: Record<string, string> = {
+  dining:        '🍽️',
+  groceries:     '🛒',
+  travel:        '✈️',
+  gas:           '⛽',
+  entertainment: '🎬',
+  other:         '🛍️',
+};
+
+const RECENT_TRANSACTIONS = [
+  { id: 't1', cardId: 'amex-gold',      merchant: 'Nobu Malibu',      date: 'Today',      category: 'dining',    amount: 284.50, cashback: 14.22 },
+  { id: 't2', cardId: 'chase-sapphire', merchant: 'Whole Foods',      date: 'Yesterday',  category: 'groceries', amount: 93.40,  cashback: 2.80  },
+  { id: 't3', cardId: 'amex-gold',      merchant: 'Delta Airlines',   date: 'Apr 8',      category: 'travel',    amount: 540.00, cashback: 16.20 },
+  { id: 't4', cardId: 'citi-double',    merchant: 'Shell Gas',        date: 'Apr 7',      category: 'gas',       amount: 68.00,  cashback: 1.36  },
+  { id: 't5', cardId: 'discover-it',    merchant: 'Netflix',          date: 'Apr 6',      category: 'entertainment', amount: 22.99, cashback: 1.38 },
+];
 
 const FEATURES = [
   { href: '/(tabs)/smartswipe', emoji: '💳', title: 'SmartSwipe', sub: 'Best card for any purchase', accent: COLORS.green, dim: COLORS.greenDim },
@@ -37,8 +55,27 @@ function FeatureCard({ emoji, title, sub, accent, dim, onPress }: typeof FEATURE
 
 export default function HomeScreen() {
   const router = useRouter();
-  const totalPoints   = CARDS.reduce((s, c) => s + c.pointsBalance, 0);
-  const totalCashback = CARDS.reduce((s, c) => s + c.totalEarned, 0);
+  const [cards, setCards] = useState<CreditCardType[]>([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/rewards`)
+      .then(r => r.json())
+      .then((apiCards: any[]) => {
+        const merged: CreditCardType[] = apiCards.map(c => ({
+          id:      c.id,
+          issuer:  c.cardIssuer ?? c.id,
+          name:    c.cardName   ?? c.id,
+          last4:   USER_CARDS[c.id]?.last4   ?? '0000',
+          network: c.cardNetwork ?? '',
+          color:   USER_CARDS[c.id]?.color   ?? 'other',
+        }));
+        setCards(merged);
+      })
+      .catch(() => {});
+  }, []);
+
+  const totalPoints   = Object.values(USER_CARDS).reduce((s, c) => s + c.pointsBalance, 0);
+  const totalCashback = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -71,7 +108,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.quickStat}>
-              <Text style={[styles.quickValue, { color: COLORS.purple }]}>{CARDS.length}</Text>
+              <Text style={[styles.quickValue, { color: COLORS.purple }]}>{Object.keys(USER_CARDS).length}</Text>
               <Text style={styles.quickLabel}>Cards</Text>
             </View>
           </View>
@@ -118,14 +155,14 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Your Cards</Text>
         </FadeIn>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardScroll}>
-          {CARDS.map(card => <CreditCard key={card.id} card={card} width={200} />)}
+          {cards.map(card => <CreditCard key={card.id} card={card} width={200} />)}
         </ScrollView>
 
         {/* Transactions */}
         <FadeIn delay={360} style={styles.section}>
           <Text style={styles.sectionTitle}>Recent</Text>
           {RECENT_TRANSACTIONS.map(tx => {
-            const card = CARDS.find(c => c.id === tx.cardId);
+            const card = cards.find(c => c.id === tx.cardId);
             return (
               <View key={tx.id} style={styles.txRow}>
                 <View style={styles.txIcon}>

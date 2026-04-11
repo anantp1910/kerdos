@@ -2,7 +2,15 @@
 
 import { motion } from "framer-motion";
 import { clsx } from "clsx";
-import type { CreditCard } from "@/lib/mockData";
+
+export type CreditCard = {
+  id: string;
+  issuer: string;
+  name: string;
+  last4: string;
+  network: string;
+  color: string;
+};
 
 const CARD_GRADIENTS: Record<string, string> = {
   amex: "from-[#1a1a2e] via-[#16213e] to-[#0f3460]",
