@@ -19,7 +19,24 @@ import {
 } from "recharts";
 import Navbar from "@/components/Navbar";
 import MarketTicker from "@/components/MarketTicker";
-import { CARDS, STOCK_TICKERS, type StockData } from "@/lib/mockData";
+import { USER_CARDS } from "@/lib/userCards";
+
+interface StockData {
+  ticker: string;
+  name: string;
+  price: number;
+  change?: number;
+  changePct: number;
+}
+
+const STOCK_TICKERS: StockData[] = [
+  { ticker: 'VOO',  name: 'Vanguard S&P 500',   price: 498.32, change:  3.21, changePct:  0.65 },
+  { ticker: 'QQQ',  name: 'Invesco Nasdaq 100',  price: 432.18, change:  5.44, changePct:  1.27 },
+  { ticker: 'SPY',  name: 'SPDR S&P 500',        price: 521.67, change:  2.89, changePct:  0.56 },
+  { ticker: 'VTI',  name: 'Vanguard Total Mkt',  price: 242.53, change: -0.87, changePct: -0.36 },
+  { ticker: 'ARKK', name: 'ARK Innovation',      price: 47.83,  change:  1.22, changePct:  2.62 },
+  { ticker: 'BND',  name: 'Vanguard Bond',       price: 73.14,  change: -0.12, changePct: -0.16 },
+];
 
 const ALLOCATION_COLORS = ["#4ade80", "#60a5fa", "#a78bfa", "#fbbf24", "#f87171"];
 
@@ -58,11 +75,16 @@ interface AIAdvice {
   threshold: number;
 }
 
+const COLOR_MAP: Record<string, string> = {
+  amex: '#60a5fa', chase: '#a78bfa', citi: '#22d3ee', discover: '#fb923c', capital: '#4ade80',
+};
+
 export default function RewardVestPage() {
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [apiCards, setApiCards] = useState<{ id: string; cardName: string }[]>([]);
 
   // Market data state
   const [marketData, setMarketData] = useState<StockData[]>(STOCK_TICKERS);
@@ -74,7 +96,7 @@ export default function RewardVestPage() {
   const [nqDate, setNqDate] = useState<string>("");
   const [nqDates, setNqDates] = useState<string[]>([]);
 
-  const totalEarned = CARDS.reduce((s, c) => s + c.totalEarned, 0);
+  const totalEarned = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
   const thisMonth = CHART_DATA[CHART_DATA.length - 1].value;
 
   // Fetch live market data on mount
@@ -93,6 +115,14 @@ export default function RewardVestPage() {
       }
     }
     fetchMarket();
+  }, []);
+
+  // Fetch live card data from Plaid/rewards API
+  useEffect(() => {
+    fetch("/api/rewards")
+      .then(r => r.json())
+      .then(setApiCards)
+      .catch(() => {});
   }, []);
 
   // Fetch NQ microstructure data
@@ -565,33 +595,18 @@ export default function RewardVestPage() {
                   Earnings by Card
                 </h3>
                 <div className="space-y-3">
-                  {CARDS.map((card) => (
-                    <div key={card.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{
-                            background:
-                              card.color === "amex"
-                                ? "#60a5fa"
-                                : card.color === "chase"
-                                ? "#a78bfa"
-                                : card.color === "citi"
-                                ? "#22d3ee"
-                                : card.color === "discover"
-                                ? "#fb923c"
-                                : "#4ade80",
-                          }}
-                        />
-                        <span className="text-xs text-white/60 truncate">
-                          {card.name}
-                        </span>
+                  {apiCards.map((card) => {
+                    const uc = USER_CARDS[card.id];
+                    return (
+                      <div key={card.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: COLOR_MAP[uc?.color ?? ''] ?? '#fff' }} />
+                          <span className="text-xs text-white/60 truncate">{card.cardName}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-white">${(uc?.totalEarned ?? 0).toLocaleString()}</span>
                       </div>
-                      <span className="text-xs font-semibold text-white">
-                        ${card.totalEarned.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

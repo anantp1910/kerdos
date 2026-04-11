@@ -1,13 +1,27 @@
 "use client";
 
-import { StockData, STOCK_TICKERS } from "@/lib/mockData";
+interface StockData {
+  ticker: string;
+  name: string;
+  price: number;
+  changePct: number;
+}
+
+const FALLBACK_TICKERS: StockData[] = [
+  { ticker: 'VOO',  name: 'Vanguard S&P 500',   price: 498.32, changePct:  0.65 },
+  { ticker: 'QQQ',  name: 'Invesco Nasdaq 100',  price: 432.18, changePct:  1.27 },
+  { ticker: 'SPY',  name: 'SPDR S&P 500',        price: 521.67, changePct:  0.56 },
+  { ticker: 'VTI',  name: 'Vanguard Total Mkt',  price: 242.53, changePct: -0.36 },
+  { ticker: 'ARKK', name: 'ARK Innovation',      price: 47.83,  changePct:  2.62 },
+  { ticker: 'BND',  name: 'Vanguard Bond',       price: 73.14,  changePct: -0.16 },
+];
 
 interface MarketTickerProps {
   data?: StockData[];
 }
 
 export default function MarketTicker({ data }: MarketTickerProps) {
-  const tickers = data && data.length > 0 ? data : STOCK_TICKERS;
+  const tickers = data && data.length > 0 ? data : FALLBACK_TICKERS;
   const doubled = [...tickers, ...tickers];
 
   return (

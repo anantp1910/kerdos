@@ -2,7 +2,15 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CARD_GRADIENTS } from '@/constants/theme';
-import type { CreditCard } from '@/lib/mockData';
+
+export type CreditCard = {
+  id: string;
+  issuer: string;
+  name: string;
+  last4: string;
+  network: string;
+  color: string;
+};
 
 // ─── ANIMATION KNOBS ────────────────────────────────────────────────────────
 const PRESS_SCALE   = 0.96;
