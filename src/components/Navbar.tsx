@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { clsx } from "clsx";
+import { getLinkedCardIds } from "@/lib/linkedCards";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
@@ -13,6 +15,12 @@ const NAV_ITEMS = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [cardCount, setCardCount] = useState(5);
+
+  useEffect(() => {
+    const ids = getLinkedCardIds();
+    if (ids) setCardCount(ids.length);
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl">
@@ -47,7 +55,7 @@ export default function Navbar() {
       {/* Right side */}
       <div className="flex items-center gap-3">
         <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-        <span className="text-xs text-white/40">5 cards linked</span>
+        <span className="text-xs text-white/40">{cardCount} card{cardCount !== 1 ? "s" : ""} linked</span>
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold">
           V
         </div>

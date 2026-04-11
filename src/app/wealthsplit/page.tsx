@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart,
@@ -10,9 +10,14 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import Navbar from "@/components/Navbar";
 import MarketTicker from "@/components/MarketTicker";
-import { CARDS, GROUP_MEMBERS } from "@/lib/mockData";
+import { USER_CARDS } from "@/lib/userCards";
+
+const GROUP_MEMBERS = [
+  { id: 'u1', name: 'Arjun', avatar: 'AJ', owes:  128.5,  cardSuggestion: 'Amex Gold'      },
+  { id: 'u2', name: 'Priya', avatar: 'PR', owes: -45.0,   cardSuggestion: 'Chase Sapphire' },
+  { id: 'u3', name: 'Zara',  avatar: 'ZK', owes:  92.3,   cardSuggestion: 'Citi Double'    },
+];
 
 const MONTHLY_DATA = [
   { month: "Nov", rewards: 210, savings: 580, investment: 48 },
@@ -74,20 +79,33 @@ const GROUP_EXPENSES: SplitItem[] = [
   },
 ];
 
+type ApiCard = { id: string; cardName: string; cardIssuer: string; cardNetwork: string; annualFee: number | null; pointValuation: number | null; isCashback: boolean; rewardRates: Record<string, number> };
+
 export default function WealthSplitPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "splits" | "cards">("overview");
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
+  const [apiCards, setApiCards] = useState<ApiCard[]>([]);
 
-  const netScore = NET_SCORE_ITEMS.reduce((s, i) => s + i.value, 0);
-  const totalCashback = CARDS.reduce((s, c) => s + c.totalEarned, 0);
-  const totalPoints = CARDS.reduce((s, c) => s + c.pointsBalance, 0);
+  useEffect(() => {
+    fetch("/api/rewards")
+      .then(r => r.json())
+      .then(setApiCards)
+      .catch(() => {});
+  }, []);
+
+  const netScore      = NET_SCORE_ITEMS.reduce((s, i) => s + i.value, 0);
+  const totalCashback = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
+  const totalPoints   = Object.values(USER_CARDS).reduce((s, c) => s + c.pointsBalance, 0);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      <Navbar />
+    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <div className="px-4 pt-12 pb-3">
+        <span className="text-[10px] font-bold tracking-widest" style={{ color: "#bf5af2" }}>SUMMARY</span>
+        <h1 className="text-2xl font-bold text-white mt-1">Financial Command Center</h1>
+      </div>
       <MarketTicker />
 
-      <div className="pt-24 pb-16 px-6">
+      <div className="pt-4 pb-6 px-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <motion.div
@@ -445,61 +463,58 @@ export default function WealthSplitPage() {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-4"
               >
-                {CARDS.map((card, i) => (
-                  <motion.div
-                    key={card.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.08 * i }}
-                    className="p-5 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/15 transition-all"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-base font-bold text-white">{card.issuer} {card.name}</p>
-                          {card.annualFee === 0 && (
-                            <span className="text-[10px] bg-green-400/10 text-green-400 px-2 py-0.5 rounded-full">
-                              No Annual Fee
-                            </span>
-                          )}
+                {apiCards.map((card, i) => {
+                  const uc  = USER_CARDS[card.id];
+                  const fee = card.annualFee ?? 0;
+                  const pv  = card.pointValuation ?? 1;
+                  const pts = uc?.pointsBalance ?? 0;
+                  return (
+                    <motion.div
+                      key={card.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.08 * i }}
+                      className="p-5 rounded-2xl bg-white/[0.03] border border-white/8 hover:border-white/15 transition-all"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-base font-bold text-white">{card.cardIssuer} {card.cardName}</p>
+                            {fee === 0 && (
+                              <span className="text-[10px] bg-green-400/10 text-green-400 px-2 py-0.5 rounded-full">
+                                No Annual Fee
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-white/40">
+                            ••••{uc?.last4 ?? '0000'} · {card.cardNetwork}
+                          </p>
                         </div>
-                        <p className="text-xs text-white/40">
-                          ••••{card.last4} · {card.network}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-green-400">
-                          ${card.totalEarned.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-white/40">total earned</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 lg:grid-cols-6 gap-2">
-                      {Object.entries(card.rewardRates).map(([cat, rate]) => (
-                        <div
-                          key={cat}
-                          className="p-2 rounded-lg bg-white/5 text-center"
-                        >
-                          <p className="text-sm font-bold text-white">{rate}x</p>
-                          <p className="text-[10px] text-white/40 capitalize">{cat}</p>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-green-400">
+                            ${(uc?.totalEarned ?? 0).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-white/40">total earned</p>
                         </div>
-                      ))}
-                    </div>
+                      </div>
 
-                    <div className="mt-4 flex gap-4 text-xs text-white/40">
-                      {card.annualFee > 0 && (
-                        <span>${card.annualFee}/yr fee</span>
-                      )}
-                      {card.pointsBalance > 0 && (
-                        <span>{card.pointsBalance.toLocaleString()} pts ({((card.pointsBalance * card.pointValuation) / 100).toFixed(0)} value)</span>
-                      )}
-                      {card.cashbackRate > 0 && (
-                        <span>{card.cashbackRate}% flat cashback</span>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                      <div className="mt-4 grid grid-cols-3 lg:grid-cols-6 gap-2">
+                        {Object.entries(card.rewardRates).map(([cat, rate]) => (
+                          <div key={cat} className="p-2 rounded-lg bg-white/5 text-center">
+                            <p className="text-sm font-bold text-white">{rate}x</p>
+                            <p className="text-[10px] text-white/40 capitalize">{cat}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 flex gap-4 text-xs text-white/40">
+                        {fee > 0 && <span>${fee}/yr fee</span>}
+                        {pts > 0 && <span>{pts.toLocaleString()} pts (${((pts * pv) / 100).toFixed(0)} value)</span>}
+                        {card.isCashback && <span>Flat cashback</span>}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
