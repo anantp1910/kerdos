@@ -1,20 +1,28 @@
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  baseURL: "https://api.featherless.ai/v1",
-  apiKey: process.env.FEATHERLESS_API_KEY ?? "",
-});
-
 interface AdviceRequest {
   totalRewards: number;
   monthlyEarnings: number[];
   riskTolerance?: "conservative" | "moderate" | "aggressive";
 }
 
-export async function POST(request: Request) {
-  const body: AdviceRequest = await request.json();
-  const { totalRewards, monthlyEarnings, riskTolerance = "moderate" } = body;
+function isValidAdviceRequest(body: unknown): body is AdviceRequest {
+  if (!body || typeof body !== "object") return false;
 
+  const candidate = body as Partial<AdviceRequest>;
+
+  return (
+    typeof candidate.totalRewards === "number" &&
+    Array.isArray(candidate.monthlyEarnings) &&
+    candidate.monthlyEarnings.every((value) => typeof value === "number") &&
+    (candidate.riskTolerance === undefined ||
+      candidate.riskTolerance === "conservative" ||
+      candidate.riskTolerance === "moderate" ||
+      candidate.riskTolerance === "aggressive")
+  );
+}
+
+export async function POST(request: Request) {
   const apiKey = process.env.FEATHERLESS_API_KEY;
   if (!apiKey || apiKey === "your_key_here") {
     return Response.json(
@@ -23,6 +31,20 @@ export async function POST(request: Request) {
     );
   }
 
+  const body = await request.json();
+  if (!isValidAdviceRequest(body)) {
+    return Response.json(
+      { error: "Invalid request body for AI advice generation" },
+      { status: 400 }
+    );
+  }
+
+  const client = new OpenAI({
+    baseURL: "https://api.featherless.ai/v1",
+    apiKey,
+  });
+
+  const { totalRewards, monthlyEarnings, riskTolerance = "moderate" } = body;
   const latestMonth = monthlyEarnings[monthlyEarnings.length - 1] ?? 0;
   const trend =
     monthlyEarnings.length >= 2
@@ -70,10 +92,29 @@ Suggest how I should invest my $${latestMonth} in rewards this month.`;
     });
 
     const raw = response.choices[0]?.message?.content?.trim() ?? "";
+    if (!raw) {
+      return Response.json(
+        { error: "Featherless returned an empty response" },
+        { status: 502 }
+      );
+    }
 
-    // Parse the JSON response — strip code fences if the model adds them
-    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const parsed = JSON.parse(cleaned);
+    // Strip accidental code fences before parsing model JSON.
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      console.error("Featherless returned non-JSON content:", raw);
+      return Response.json(
+        { error: "Featherless returned an invalid JSON payload" },
+        { status: 502 }
+      );
+    }
 
     return Response.json({ data: parsed });
   } catch (err: unknown) {
