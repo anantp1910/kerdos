@@ -11,6 +11,7 @@ import FadeIn from '@/components/FadeIn';
 import { COLORS } from '@/constants/theme';
 import { USER_CARDS } from '@/lib/userCards';
 import { API_BASE } from '@/lib/apiConfig';
+import { addSwipeTransaction } from '@/lib/transactionStore';
 
 const CATEGORIES = [
   { id: 'dining',        label: 'Dining',       icon: '🍽️' },
@@ -259,6 +260,25 @@ export default function SmartSwipeScreen() {
                 </Text>
               </View>
 
+              {/* Use this card */}
+              <Pressable
+                style={styles.useCardBtn}
+                onPress={() => {
+                  addSwipeTransaction({
+                    merchant: merchant || 'Unknown Merchant',
+                    amount: parsedAmount,
+                    cardName: results[0].card.cardName,
+                    cardIssuer: results[0].card.cardIssuer,
+                    cashback: results[0].score,
+                    category,
+                  });
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  reset();
+                }}
+              >
+                <Text style={styles.useCardBtnText}>✓ Used this card — log transaction</Text>
+              </Pressable>
+
               {/* Reset */}
               <Pressable onPress={reset} style={styles.resetBtn}>
                 <Text style={styles.resetText}>← New Analysis</Text>
@@ -341,6 +361,8 @@ const styles = StyleSheet.create({
   insightText: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
   insightBold: { color: '#fff', fontWeight: '700' },
 
+  useCardBtn: { backgroundColor: '#1c3a1c', borderWidth: 1, borderColor: COLORS.green, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
+  useCardBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.green },
   resetBtn:  { alignItems: 'center', paddingVertical: 14 },
   resetText: { fontSize: 14, color: COLORS.textMuted, fontWeight: '600' },
 });
