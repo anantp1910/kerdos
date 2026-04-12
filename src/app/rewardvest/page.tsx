@@ -905,6 +905,123 @@ export default function RewardVestPage() {
               )}
             </AnimatePresence>
 
+            {/* Wealth Radar — holographic spider chart */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.35 }}
+              className="p-5"
+              style={cardStyle}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className={labelStyle} style={{ color: "var(--text-2)" }}>Wealth Radar</p>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa" }}>
+                  Portfolio DNA
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-white mb-3">5-axis portfolio fingerprint</p>
+              <div className="chart-stage chart-stage-violet" style={{ borderRadius: 14 }}>
+                <div style={{ height: 220 }}>
+                  <ReactECharts
+                    option={{
+                      backgroundColor: "transparent",
+                      radar: {
+                        indicator: [
+                          { name: "Growth", max: 10 },
+                          { name: "Innovation", max: 10 },
+                          { name: "Yield", max: 10 },
+                          { name: "Liquidity", max: 10 },
+                          { name: "Safety", max: 10 },
+                        ],
+                        center: ["50%", "52%"],
+                        radius: "66%",
+                        startAngle: 90,
+                        splitNumber: 4,
+                        axisName: {
+                          color: "var(--text-2)",
+                          fontSize: 10,
+                          fontWeight: "bold",
+                        },
+                        axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
+                        splitLine: { lineStyle: { color: "rgba(255,255,255,0.07)" } },
+                        splitArea: {
+                          areaStyle: {
+                            color: [
+                              "rgba(167,139,250,0.04)",
+                              "rgba(167,139,250,0.02)",
+                              "rgba(167,139,250,0.01)",
+                              "rgba(0,0,0,0)",
+                            ],
+                          },
+                        },
+                      },
+                      series: [
+                        {
+                          type: "radar",
+                          data: [
+                            {
+                              value: radarScores,
+                              name: "Portfolio",
+                              areaStyle: {
+                                color: {
+                                  type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+                                  colorStops: [
+                                    { offset: 0, color: "rgba(192,132,252,0.55)" },
+                                    { offset: 1, color: "rgba(96,165,250,0.2)" },
+                                  ],
+                                },
+                              },
+                              lineStyle: {
+                                color: "#a78bfa",
+                                width: 2.2,
+                                shadowColor: "#a78bfa",
+                                shadowBlur: 18,
+                              },
+                              itemStyle: {
+                                color: "#c084fc",
+                                shadowColor: "#c084fc",
+                                shadowBlur: 12,
+                              },
+                              symbol: "circle",
+                              symbolSize: 5,
+                            },
+                          ],
+                          animationType: "expansion",
+                          animationDuration: 1600,
+                          animationEasing: "elasticOut",
+                        },
+                      ],
+                      tooltip: {
+                        show: true,
+                        backgroundColor: "rgba(15,9,24,0.95)",
+                        borderColor: "rgba(167,139,250,0.3)",
+                        borderRadius: 12,
+                        textStyle: { color: "white", fontSize: 11 },
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        formatter: (params: any) => {
+                          const dims = ["Growth", "Innovation", "Yield", "Liquidity", "Safety"];
+                          const vals: number[] = params.value;
+                          return `<b style="color:#c084fc">Portfolio Fingerprint</b><br/>` +
+                            dims.map((d, i) => `${d}: <b>${vals[i].toFixed(1)}</b>/10`).join("<br/>");
+                        },
+                      },
+                    }}
+                    style={{ height: "100%", width: "100%" }}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-5 gap-1 mt-3">
+                {["Growth", "Innov.", "Yield", "Liquid.", "Safety"].map((dim, i) => (
+                  <div key={dim} className="text-center">
+                    <p className="text-[10px] font-bold" style={{ color: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}>
+                      {radarScores[i]?.toFixed(1)}
+                    </p>
+                    <p className="text-[9px]" style={{ color: "var(--text-3)" }}>{dim}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
             {/* Earnings by card */}
             <div className="p-5" style={cardStyle}>
               <p className={`${labelStyle} mb-4`} style={{ color: "var(--text-2)" }}>Earnings by Card</p>
