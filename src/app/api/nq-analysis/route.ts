@@ -3,6 +3,11 @@ import path from "path";
 
 const ANALYSIS_DIR = path.join(process.cwd(), "data", "analysis");
 
+// JSON files from Python may contain NaN — replace with null before parsing
+function parseWithNaN(text: string) {
+  return JSON.parse(text.replace(/:\s*NaN/g, ": null"));
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
@@ -29,10 +34,10 @@ export async function GET(request: Request) {
     }
     const latest = files[files.length - 1];
     const latestDate = latest.replace(".json", "");
-    const bars = JSON.parse(fs.readFileSync(path.join(ANALYSIS_DIR, latest), "utf-8"));
+    const bars = parseWithNaN(fs.readFileSync(path.join(ANALYSIS_DIR, latest), "utf-8"));
     return Response.json({ date: latestDate, bars, fallback: true });
   }
 
-  const bars = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  const bars = parseWithNaN(fs.readFileSync(filePath, "utf-8"));
   return Response.json({ date, bars });
 }
