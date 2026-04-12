@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import dynamic from "next/dynamic";
 import type { CSSProperties, ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -10,6 +10,7 @@ import {
   Sparkles, CreditCard, DollarSign, PieChart,
 } from "lucide-react";
 import MarketTicker from "@/components/MarketTicker";
+import { ParticleCard, GlobalSpotlight } from "@/components/MagicBento";
 import LiquidityDominanceChart from "@/components/invest/LiquidityDominanceChart";
 import PortfolioLandscapeChart from "@/components/invest/PortfolioLandscapeChart";
 import { DEMO_USER_ID } from "@/lib/demoUser";
@@ -145,6 +146,8 @@ const glassStrong: CSSProperties = {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RewardVestPage() {
+  const bentoRef = useRef<HTMLDivElement>(null);
+
   const [rewardSummary, setRewardSummary] = useState<RewardSummary>({
     totalEarned: 0, totalPoints: 0, totalSpend: 0, cards: {}, transactions: [],
   });
@@ -337,8 +340,9 @@ export default function RewardVestPage() {
     <div className="min-h-screen" style={{ position: "relative", zIndex: 1 }}>
 
       <MarketTicker />
+      <GlobalSpotlight gridRef={bentoRef} glowColor="0,200,5" spotlightRadius={380} />
 
-      <div style={{ padding: "16px 28px 48px", maxWidth: 1280, margin: "0 auto" }}>
+      <div ref={bentoRef} style={{ padding: "16px 28px 48px", maxWidth: 1280, margin: "0 auto" }}>
 
         {/* ── Stat strip — homepage Band 3 cards ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
@@ -347,60 +351,51 @@ export default function RewardVestPage() {
               key={label}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              whileHover={{
-                y: -4, scale: 1.03,
-                border: `1px solid rgba(${rgb},0.45)`,
-                boxShadow: `0 12px 32px rgba(${rgb},0.12), 0 4px 12px rgba(0,0,0,0.3)`,
-              }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ delay: 0.04 * i, type: "spring", stiffness: 400, damping: 28 }}
-              style={{ ...cardBase, cursor: "pointer", padding: "14px 18px", display: "flex", flexDirection: "column", gap: 4 }}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ delay: 0.04 * i, type: "spring", stiffness: 700, damping: 28 }}
+              style={{ cursor: "pointer" }}
             >
-              {/* Accent bar */}
-              <div style={{
-                position: "absolute", top: 0, left: 18, right: 18, height: 2,
-                background: `linear-gradient(to right, rgba(${rgb},0.75), rgba(${rgb},0.1))`,
-                borderRadius: "0 0 4px 4px",
-              }} />
-
-              {/* Label row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Icon size={12} color={`rgba(${rgb},0.9)`} strokeWidth={2} />
-                <span style={{
-                  fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)",
-                  letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "var(--font-display)",
-                }}>
-                  {label}
+              <ParticleCard
+                className="magic-bento-card magic-bento-card--border-glow"
+                style={{ ...cardBase, padding: "14px 18px", aspectRatio: "auto", minHeight: "auto",
+                  display: "flex", flexDirection: "column", gap: 4,
+                  ["--glow-color" as string]: rgb } as CSSProperties}
+                glowColor={rgb}
+                enableTilt={false}
+                clickEffect={true}
+                enableMagnetism={false}
+                particleCount={6}
+              >
+                {/* Accent bar */}
+                <div style={{
+                  position: "absolute", top: 0, left: 18, right: 18, height: 2,
+                  background: `linear-gradient(to right, rgba(${rgb},0.75), rgba(${rgb},0.1))`,
+                  borderRadius: "0 0 4px 4px",
+                }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Icon size={12} color={`rgba(${rgb},0.9)`} strokeWidth={2} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)",
+                    letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "var(--font-display)" }}>
+                    {label}
+                  </span>
+                </div>
+                <span style={{ fontSize: "clamp(18px, 1.9vw, 26px)", fontWeight: 800, lineHeight: 1.1,
+                  letterSpacing: "-0.02em", fontFamily: "var(--font-display)", color: "#fff" }}>
+                  {value}
                 </span>
-              </div>
-
-              {/* Hero value */}
-              <span style={{
-                fontSize: "clamp(18px, 1.9vw, 26px)", fontWeight: 800, lineHeight: 1.1,
-                letterSpacing: "-0.02em", fontFamily: "var(--font-display)", color: "#fff",
-              }}>
-                {value}
-              </span>
-
-              {/* Delta */}
-              <span style={{
-                fontSize: 12, fontWeight: 700, color: `rgba(${rgb},0.9)`,
-                fontFamily: "var(--font-display)",
-              }}>
-                {delta}
-              </span>
-
-              {/* Sub */}
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-display)" }}>
-                {sub}
-              </span>
-
-              {/* Market status hint on portfolio card */}
-              {label === "Portfolio" && (
-                <span style={{ fontSize: 9, fontWeight: 700, color: marketStatusColor, fontFamily: "var(--font-display)" }}>
-                  {marketStatusLabel}
+                <span style={{ fontSize: 12, fontWeight: 700, color: `rgba(${rgb},0.9)`, fontFamily: "var(--font-display)" }}>
+                  {delta}
                 </span>
-              )}
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-display)" }}>
+                  {sub}
+                </span>
+                {label === "Portfolio" && (
+                  <span style={{ fontSize: 9, fontWeight: 700, color: marketStatusColor, fontFamily: "var(--font-display)" }}>
+                    {marketStatusLabel}
+                  </span>
+                )}
+              </ParticleCard>
             </motion.div>
           ))}
         </div>
@@ -445,7 +440,16 @@ export default function RewardVestPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  style={{ ...cardBase, padding: "22px 22px 18px" }}
+                >
+                <ParticleCard
+                  className="magic-bento-card magic-bento-card--border-glow"
+                  style={{ ...cardBase, padding: "22px 22px 18px", aspectRatio: "auto", minHeight: "auto",
+                    ["--glow-color" as string]: "0,200,5" } as CSSProperties}
+                  glowColor="0,200,5"
+                  enableTilt={false}
+                  clickEffect={true}
+                  enableMagnetism={false}
+                  particleCount={8}
                 >
                   {/* Green accent bar */}
                   <div style={{
@@ -600,6 +604,7 @@ export default function RewardVestPage() {
                     <DollarSign size={11} strokeWidth={2.5} />
                     {isInvesting ? "Logging..." : investmentConfirmed ? "Investment Logged ✓" : "I Invested This"}
                   </motion.button>
+                </ParticleCard>
                 </motion.div>
 
               ) : (
@@ -642,13 +647,18 @@ export default function RewardVestPage() {
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              whileHover={{
-                y: -2, scale: 1.01,
-                border: "1px solid rgba(128,236,255,0.28)",
-                boxShadow: "0 8px 24px rgba(128,236,255,0.06)",
-              }}
-              style={{ ...cardBase, cursor: "default", padding: "18px 20px" }}
+              whileHover={{ y: -2, scale: 1.01 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 700, damping: 28 }}
+            >
+            <ParticleCard
+              className="magic-bento-card magic-bento-card--border-glow"
+              style={{ ...cardBase, padding: "18px 20px", aspectRatio: "auto", minHeight: "auto",
+                ["--glow-color" as string]: "128,236,255" } as CSSProperties}
+              glowColor="128,236,255"
+              enableTilt={false}
+              clickEffect={true}
+              enableMagnetism={false}
+              particleCount={6}
             >
               {/* Cyan accent bar */}
               <div style={{
@@ -689,19 +699,25 @@ export default function RewardVestPage() {
                   Investment tranche logged into WealthSplit.
                 </p>
               )}
+            </ParticleCard>
             </motion.div>
 
             {/* ── Earnings by Card ── */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.24 }}
-              whileHover={{
-                y: -2, scale: 1.01,
-                border: "1px solid rgba(167,139,250,0.28)",
-                boxShadow: "0 8px 24px rgba(167,139,250,0.06)",
-              }}
-              style={{ ...cardBase, cursor: "default", padding: "18px 20px" }}
+              whileHover={{ y: -2, scale: 1.01 }}
+              transition={{ delay: 0.24, type: "spring", stiffness: 700, damping: 28 }}
+            >
+            <ParticleCard
+              className="magic-bento-card magic-bento-card--border-glow"
+              style={{ ...cardBase, padding: "18px 20px", aspectRatio: "auto", minHeight: "auto",
+                ["--glow-color" as string]: "167,139,250" } as CSSProperties}
+              glowColor="167,139,250"
+              enableTilt={false}
+              clickEffect={true}
+              enableMagnetism={false}
+              particleCount={6}
             >
               {/* Purple accent bar */}
               <div style={{
@@ -767,6 +783,7 @@ export default function RewardVestPage() {
                   ))}
                 </div>
               )}
+            </ParticleCard>
             </motion.div>
 
           </div>
