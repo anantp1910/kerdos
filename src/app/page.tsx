@@ -8,12 +8,8 @@ import CreditCard, { type CreditCardData } from "@/components/CreditCard";
 import PlaidConnect from "@/components/PlaidConnect";
 import { USER_CARDS } from "@/lib/userCards";
 import { getLinkedCardIds, type LinkedCardMapping } from "@/lib/linkedCards";
-
-const STATS = [
-  { label: "Cashback",      value: "$340",    delta: "+8.2%",  sub: "from last cycle",  icon: Wallet,     color: "var(--green)" },
-  { label: "Points Earned", value: "174,800", delta: "+12.1%", sub: "accelerated earn", icon: Star,       color: "#80ecff"       },
-  { label: "Net Gain",      value: "$847",    delta: "+15.3%", sub: "portfolio boost",  icon: TrendingUp, color: "var(--green)" },
-];
+import { getPortfolioGain } from "@/lib/investmentStore";
+import { DEMO_USER_ID } from "@/lib/demoUser";
 
 // Module-level cache — survives client-side navigation
 let _cachedCards: CreditCardData[] | null = null;
@@ -28,6 +24,11 @@ export default function HomePage() {
   const [cards, setCards]         = useState<CreditCardData[]>([]);
   const [linkedIds, setLinkedIds] = useState<string[] | null>(null);
   const [showPlaid, setShowPlaid] = useState(false);
+  const [liveStats, setLiveStats] = useState<{
+    lastCycleCashback: number;
+    totalPoints: number;
+    portfolioGain: number;
+  } | null>(null);
 
   // Looping carousel via MotionValue
   const x         = useMotionValue(0);
@@ -118,8 +119,58 @@ export default function HomePage() {
   useEffect(() => {
     setLinkedIds(getLinkedCardIds());
     refreshCards();
+
+    // Fetch live stats from rewards summary
+    fetch(`/api/rewards/summary?userId=${DEMO_USER_ID}`, { cache: "no-store" })
+      .then(r => r.json())
+      .then((data: {
+        totalEarned?: number;
+        totalPoints?: number;
+        transactions?: { estimatedValue: number; createdAt: string }[];
+      }) => {
+        const now = new Date();
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
+        const lastCycleCashback = (data.transactions ?? [])
+          .filter(t => t.createdAt.startsWith(lastMonthKey))
+          .reduce((s, t) => s + t.estimatedValue, 0);
+        setLiveStats({
+          lastCycleCashback,
+          totalPoints: data.totalPoints ?? 0,
+          portfolioGain: getPortfolioGain(),
+        });
+      })
+      .catch(() => {});
   }, [refreshCards]);
 
+
+  const gain = liveStats?.portfolioGain ?? 0;
+  const STATS = [
+    {
+      label: "Cashback",
+      value: liveStats ? `$${liveStats.lastCycleCashback.toFixed(2)}` : "—",
+      delta: liveStats ? (liveStats.lastCycleCashback > 0 ? `+$${liveStats.lastCycleCashback.toFixed(2)}` : "$0.00") : "...",
+      sub: "from last cycle",
+      icon: Wallet,
+      color: "var(--green)",
+    },
+    {
+      label: "Points Earned",
+      value: liveStats ? liveStats.totalPoints.toLocaleString() : "—",
+      delta: liveStats ? `${liveStats.totalPoints.toLocaleString()} pts` : "...",
+      sub: "total earned",
+      icon: Star,
+      color: "#80ecff",
+    },
+    {
+      label: "Net Gain",
+      value: liveStats ? `$${Math.abs(gain).toFixed(2)}` : "—",
+      delta: liveStats ? `${gain >= 0 ? "+" : "-"}$${Math.abs(gain).toFixed(2)}` : "...",
+      sub: "portfolio return",
+      icon: TrendingUp,
+      color: gain < 0 ? "var(--red, #f87171)" : "var(--green)",
+    },
+  ];
 
   return (
     <div className="overflow-hidden flex flex-col" style={{ height: "calc(100vh - 72px)" }}>
