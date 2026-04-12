@@ -1621,42 +1621,108 @@ export default function RewardVestPage() {
                   transition={{ duration: 6.5, repeat: Infinity, ease: "linear" }}
                 />
                 <div className="chart-tilt" style={{ height: 240 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={projectionData}
-                      margin={{ top: 18, right: 16, bottom: 10, left: 30 }}
-                    >
-                      <defs>
-                        <linearGradient id="portfolioHalo" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgba(192,132,252,0.34)" />
-                          <stop offset="100%" stopColor="rgba(192,132,252,0)" />
-                        </linearGradient>
-                        <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#c084fc" stopOpacity={0.9} />
-                          <stop offset="55%" stopColor="#a78bfa" stopOpacity={0.32} />
-                          <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.02} />
-                        </linearGradient>
-                        <linearGradient id="investedGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 8" />
-                      <XAxis dataKey="label" tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} interval={11} />
-                      <YAxis tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={formatMoneyTick} />
-                      <Tooltip
-                        contentStyle={{ background: "rgba(15,9,24,0.92)", border: "1px solid rgba(167,139,250,0.32)", borderRadius: 14, fontSize: 11, boxShadow: "0 18px 60px rgba(0,0,0,0.34)" }}
-                        labelFormatter={(label, payload) => {
-                          const monthIndex = payload?.[0]?.payload?.monthIndex ?? 0;
-                          return `Month ${monthIndex}`;
-                        }}
-                        formatter={(v, name) => [`$${Number(v).toLocaleString()}`, name === "portfolio" ? "Portfolio Value" : "Total Invested"]}
-                      />
-                      <Area type="monotone" dataKey="halo" stroke="transparent" fill="url(#portfolioHalo)" isAnimationActive />
-                      <Area type="monotone" dataKey="invested" stroke="#60a5fa" strokeWidth={1.3} strokeDasharray="4 2" fill="url(#investedGrad)" dot={false} isAnimationActive />
-                      <Area type="monotone" dataKey="portfolio" stroke="#c084fc" strokeWidth={2.4} fill="url(#portfolioGrad)" dot={false} activeDot={{ r: 5, fill: "#ffffff", stroke: "#c084fc", strokeWidth: 2 }} isAnimationActive />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <ReactECharts
+                    option={{
+                      backgroundColor: "transparent",
+                      grid: { left: "3%", right: "4%", bottom: "10%", top: "12%", containLabel: true },
+                      xAxis: {
+                        type: "category",
+                        data: projectionData.map(d => d.label),
+                        axisLine: { show: false },
+                        axisTick: { show: false },
+                        axisLabel: { color: "var(--text-2)", fontSize: 10 },
+                        boundaryGap: false,
+                      },
+                      yAxis: {
+                        type: "value",
+                        axisLine: { show: false },
+                        axisTick: { show: false },
+                        axisLabel: { color: "var(--text-2)", fontSize: 10, formatter: formatMoneyTick },
+                        splitLine: { lineStyle: { color: "rgba(255,255,255,0.06)", type: "dashed" } },
+                      },
+                      tooltip: {
+                        trigger: "axis",
+                        backgroundColor: "rgba(15,9,24,0.95)",
+                        borderColor: "rgba(167,139,250,0.32)",
+                        borderRadius: 14,
+                        textStyle: { color: "white", fontSize: 11 },
+                        boxShadow: "0 18px 60px rgba(0,0,0,0.34)",
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        formatter: (params: any) => {
+                          const idx = params[0]?.dataIndex ?? 0;
+                          const yr = Math.floor(idx / 12);
+                          const mo = idx % 12;
+                          const label = mo === 0 ? `Year ${yr}` : `Y${yr} M${mo}`;
+                          const pv = params.find((p: any) => p.seriesName === "Portfolio Value");
+                          const iv = params.find((p: any) => p.seriesName === "Total Invested");
+                          const gain = (pv?.value ?? 0) - (iv?.value ?? 0);
+                          return `<b>${label}</b><br/>Portfolio: <b style="color:#c084fc">$${Number(pv?.value ?? 0).toLocaleString()}</b><br/>Invested: <span style="color:#60a5fa">$${Number(iv?.value ?? 0).toLocaleString()}</span><br/>Gain: <span style="color:#34d399">+$${gain.toLocaleString()}</span>`;
+                        },
+                      },
+                      series: [
+                        {
+                          name: "Total Invested",
+                          type: "line",
+                          data: projectionData.map(d => d.invested),
+                          smooth: false,
+                          symbol: "none",
+                          lineStyle: { color: "#60a5fa", width: 1.3, type: "dashed" },
+                          areaStyle: {
+                            color: {
+                              type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+                              colorStops: [
+                                { offset: 0, color: "rgba(96,165,250,0.18)" },
+                                { offset: 1, color: "rgba(96,165,250,0)" },
+                              ],
+                            },
+                          },
+                          animationDuration: 2800,
+                          animationEasing: "cubicOut",
+                        },
+                        {
+                          name: "Portfolio Value",
+                          type: "line",
+                          data: projectionData.map(d => d.portfolio),
+                          smooth: true,
+                          symbol: "none",
+                          lineStyle: {
+                            color: "#c084fc",
+                            width: 2.6,
+                            shadowColor: "rgba(192,132,252,0.6)",
+                            shadowBlur: 14,
+                          },
+                          areaStyle: {
+                            color: {
+                              type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+                              colorStops: [
+                                { offset: 0,    color: "rgba(192,132,252,0.58)" },
+                                { offset: 0.42, color: "rgba(167,139,250,0.22)" },
+                                { offset: 1,    color: "rgba(167,139,250,0.02)" },
+                              ],
+                            },
+                          },
+                          markLine: {
+                            silent: true,
+                            symbol: "none",
+                            data: Array.from({ length: 10 }, (_, i) => ({
+                              xAxis: (i + 1) * 12,
+                              lineStyle: { color: "rgba(192,132,252,0.15)", type: "dashed", width: 1 },
+                              label: {
+                                show: true,
+                                formatter: `Y${i + 1}`,
+                                color: "rgba(192,132,252,0.55)",
+                                fontSize: 9,
+                                position: "insideEndTop",
+                              },
+                            })),
+                          },
+                          animationDuration: 3200,
+                          animationEasing: "cubicOut",
+                        },
+                      ],
+                    }}
+                    style={{ height: "100%", width: "100%" }}
+                  />
                 </div>
               </div>
               <div className="flex items-center gap-5 mt-2 text-[10px]" style={{ color: "var(--text-2)" }}>
