@@ -94,7 +94,7 @@ const GROUP_EXPENSES: SplitItem[] = [
   },
   {
     id: "e2",
-    description: "Airbnb â€” Miami trip",
+    description: "Airbnb — Miami trip",
     total: 1200,
     splits: [
       { name: "You", amount: 400, paid: true },
@@ -180,11 +180,11 @@ export default function WealthSplitPage() {
   const swipeCount = rewardSummary.transactions.length;
 
   const overviewMetrics: OverviewMetric[] = [
-    { label: "Rewards This Month", value: currentMonthRewards, color: "#4ade80", icon: "$", money: true },
-    { label: "Tracked Spend", value: currentMonthSpend, color: "#60a5fa", icon: "S", money: true },
-    { label: "Invested This Month", value: currentMonthInvested, color: "#a78bfa", icon: "I", money: true },
-    { label: "Portfolio Gain", value: portfolioGain, color: portfolioGain >= 0 ? "#4ade80" : "#f87171", icon: "G", money: true },
-    { label: "Logged Swipes", value: swipeCount, color: "#facc15", icon: "#", money: false },
+    { label: "Rewards This Month", value: currentMonthRewards, color: "#4ade80", icon: "💰", money: true },
+    { label: "Tracked Spend", value: currentMonthSpend, color: "#60a5fa", icon: "💳", money: true },
+    { label: "Invested This Month", value: currentMonthInvested, color: "#a78bfa", icon: "📈", money: true },
+    { label: "Portfolio Gain", value: portfolioGain, color: portfolioGain >= 0 ? "#4ade80" : "#f87171", icon: "📊", money: true },
+    { label: "Logged Swipes", value: swipeCount, color: "#facc15", icon: "⚡", money: false },
   ];
   const netScore = currentMonthRewards + portfolioGain;
 
@@ -195,50 +195,10 @@ export default function WealthSplitPage() {
       animate={{ opacity: 1, filter: "blur(0px)" }}
       transition={{ duration: 0.2, ease: "easeOut" }}
     >
-      <div className="px-4 pt-12 pb-3">
-        <span className="text-[10px] font-bold tracking-widest" style={{ color: "#bf5af2" }}>SUMMARY</span>
-        <h1 className="text-2xl font-bold text-white mt-1">Financial Command Center</h1>
-      </div>
       <MarketTicker />
 
       <div className="pt-4 pb-6 px-4">
         <div className="max-w-6xl mx-auto min-w-0">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-400/10 border border-purple-400/20 text-purple-400 text-xs font-medium mb-4">
-              âš–ï¸ WealthSplit
-            </div>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <h1 className="text-4xl font-bold text-white">
-                  Financial Command Center
-                </h1>
-                <p className="text-white/40 mt-2 text-lg">
-                  Your complete picture: savings, rewards, investments, and splits.
-                </p>
-              </div>
-              {/* Net score */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 }}
-                className="hidden lg:flex flex-col items-center p-5 rounded-2xl bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-400/20"
-              >
-                <p className="text-xs text-white/40 uppercase tracking-widest mb-1">
-                  Net Score
-                </p>
-                <p className="text-4xl font-bold text-green-400">
-                  {netScore >= 0 ? "+" : "-"}${Math.abs(netScore).toFixed(2)}
-                </p>
-                <p className="text-xs text-white/40 mt-1">this month</p>
-              </motion.div>
-            </div>
-          </motion.div>
-
           {/* Tabs */}
           <div className="flex gap-2 mb-8 p-1 bg-white/5 rounded-xl w-fit flex-wrap">
             {(["overview", "investments", "splits", "cards"] as const).map((tab) => (
@@ -251,7 +211,7 @@ export default function WealthSplitPage() {
                     : "text-white/40 hover:text-white/60"
                 }`}
               >
-                {tab === "overview" ? "ðŸ“Š Overview" : tab === "investments" ? "ðŸ“ˆ Investments" : tab === "splits" ? "ðŸ¤ Group Splits" : "ðŸ’³ Cards"}
+                {tab === "overview" ? "📊 Overview" : tab === "investments" ? "📈 Investments" : tab === "splits" ? "🤝 Group Splits" : "💳 Cards"}
               </button>
             ))}
           </div>
@@ -490,7 +450,7 @@ export default function WealthSplitPage() {
                         </div>
                         {card.fee > 0 && (
                           <p className="text-[10px] text-white/30">
-                            ${card.fee} annual fee Â· ${card.monthlyEarnings}/mo earned
+                            ${card.fee} annual fee · ${card.monthlyEarnings}/mo earned
                           </p>
                         )}
                       </motion.div>
@@ -753,7 +713,7 @@ export default function WealthSplitPage() {
                             )}
                           </div>
                           <p className="text-xs text-white/40">
-                            â€¢â€¢â€¢â€¢{uc?.last4 ?? '0000'} Â· {card.cardNetwork}
+                            â€¢â€¢â€¢â€¢{uc?.last4 ?? '0000'} · {card.cardNetwork}
                           </p>
                         </div>
                         <div className="text-right">
