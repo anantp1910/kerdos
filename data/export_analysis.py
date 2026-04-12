@@ -2,6 +2,7 @@
 Export nq_features.parquet to per-day JSON files for the Next.js web app.
 Run once after features.py: python data/export_analysis.py
 """
+import math
 import pandas as pd
 import numpy as np
 import json
@@ -47,7 +48,11 @@ for d in dates:
     records = []
     for ts, row in day.iterrows():
         rec = {"t": ts.strftime("%H:%M")}
-        rec.update(row.to_dict())
+        for k, v in row.items():
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                rec[k] = None
+            else:
+                rec[k] = v
         records.append(rec)
 
     date_str = str(d)

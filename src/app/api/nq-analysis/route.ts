@@ -29,10 +29,11 @@ export async function GET(request: Request) {
     }
     const latest = files[files.length - 1];
     const latestDate = latest.replace(".json", "");
-    const bars = JSON.parse(fs.readFileSync(path.join(ANALYSIS_DIR, latest), "utf-8"));
+    const bars = JSON.parse(fs.readFileSync(path.join(ANALYSIS_DIR, latest), "utf-8").replace(/\bNaN\b/g, "null"));
     return Response.json({ date: latestDate, bars, fallback: true });
   }
 
-  const bars = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  const raw = fs.readFileSync(filePath, "utf-8").replace(/\bNaN\b/g, "null");
+  const bars = JSON.parse(raw);
   return Response.json({ date, bars });
 }

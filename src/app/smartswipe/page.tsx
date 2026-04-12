@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap } from "lucide-react";
+import { Zap, CheckCircle } from "lucide-react";
 import MarketTicker from "@/components/MarketTicker";
 import { getLinkedCardIds } from "@/lib/linkedCards";
+import { logReward } from "@/lib/rewardsStore";
 
 const CATEGORIES = [
   { id: "dining",        label: "Dining",       icon: "🍽️" },
@@ -43,6 +44,7 @@ export default function SmartSwipePage() {
   const [results,       setResults]       = useState<CardResult[] | null>(null);
   const [isAnalyzing,   setIsAnalyzing]   = useState(false);
   const [linkedCardIds, setLinkedCardIds] = useState<string[] | null>(null);
+  const [logged, setLogged] = useState(false);
 
   const parsedAmount = parseFloat(amount) || 0;
   const barMax = results?.[0]?.score ?? 1;
@@ -64,10 +66,23 @@ export default function SmartSwipePage() {
     if (parsedAmount <= 0 || !activeCards.length) return;
     setIsAnalyzing(true);
     setResults(null);
+    setLogged(false);
     setTimeout(() => {
       setResults(rankCards(activeCards, category, parsedAmount));
       setIsAnalyzing(false);
     }, 600);
+  };
+
+  const handleLogReward = () => {
+    if (!best || logged) return;
+    logReward({
+      date: new Date().toISOString().split("T")[0],
+      amount: Math.round(best.score * 100) / 100,
+      cardId: best.card.id,
+      cardName: `${best.card.cardIssuer} ${best.card.cardName}`,
+      category,
+    });
+    setLogged(true);
   };
 
   const best = results?.[0];
@@ -186,6 +201,19 @@ export default function SmartSwipePage() {
                       ${best.score.toFixed(2)}
                     </p>
                     <p className="text-xs" style={{ color: "var(--text-2)" }}>earned back</p>
+                    <button
+                      onClick={handleLogReward}
+                      disabled={logged}
+                      className="mt-2 flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg transition-all disabled:opacity-60"
+                      style={{
+                        background: logged ? "rgba(74,222,128,0.15)" : "var(--green-dim)",
+                        color: "var(--green)",
+                        border: "1px solid var(--green)",
+                      }}
+                    >
+                      <CheckCircle size={11} />
+                      {logged ? "Logged to RewardVest" : "Log to RewardVest"}
+                    </button>
                   </div>
                 </div>
               </div>

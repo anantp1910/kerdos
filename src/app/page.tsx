@@ -8,6 +8,7 @@ import MarketTicker from "@/components/MarketTicker";
 import CreditCard, { type CreditCardData } from "@/components/CreditCard";
 import { USER_CARDS } from "@/lib/userCards";
 import { getLinkedCardIds } from "@/lib/linkedCards";
+import { getThisMonth } from "@/lib/rewardsStore";
 
 const INDEX_CARDS = [
   { label: "DJIA",    value: "40,657.56", change: "-26.00", pct: "-0.09%", up: false },
@@ -43,8 +44,10 @@ export default function HomePage() {
   const [newsTab, setNewsTab]   = useState<"top" | "portfolio">("top");
   const [cards, setCards]       = useState<CreditCardData[]>([]);
   const [linkedIds, setLinkedIds] = useState<string[] | null>(null);
+  const [rewardsThisMonth, setRewardsThisMonth] = useState(0);
 
   useEffect(() => {
+    setRewardsThisMonth(getThisMonth());
     fetch("/api/rewards")
       .then(r => r.json())
       .then((apiCards: any[]) => {
@@ -130,7 +133,7 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Cashback", value: "$340" },
+              { label: "Cashback", value: `$${rewardsThisMonth.toFixed(2)}` },
               { label: "Points",   value: "174,800" },
               { label: "Net Gain", value: "$847" },
             ].map((s) => (

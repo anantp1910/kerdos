@@ -1,28 +1,43 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 interface IndexQuote {
   label: string;
   value: string;
   change: string;
+  changePct: number;
   up: boolean;
 }
 
-const INDICES: IndexQuote[] = [
-  { label: "DJIA",    value: "40,657",  change: "+0.37%", up: true  },
-  { label: "NASDAQ",  value: "18,657",  change: "-0.02%", up: false },
-  { label: "S&P 500", value: "5,657",   change: "+0.73%", up: true  },
-  { label: "VIX",     value: "18.42",   change: "-2.10%", up: false },
-  { label: "10Y",     value: "4.38%",   change: "+0.03",  up: true  },
-  { label: "BTC",     value: "83,412",  change: "+1.24%", up: true  },
+// Fallback shown while loading or if fetch fails
+const FALLBACK: IndexQuote[] = [
+  { label: "DJIA",    value: "—",  change: "—",     changePct: 0, up: true  },
+  { label: "NASDAQ",  value: "—",  change: "—",     changePct: 0, up: true  },
+  { label: "S&P 500", value: "—",  change: "—",     changePct: 0, up: true  },
+  { label: "VIX",     value: "—",  change: "—",     changePct: 0, up: false },
+  { label: "10Y",     value: "—",  change: "—",     changePct: 0, up: true  },
+  { label: "BTC",     value: "—",  change: "—",     changePct: 0, up: true  },
 ];
 
 export default function MarketTicker() {
+  const [indices, setIndices] = useState<IndexQuote[]>(FALLBACK);
+
+  useEffect(() => {
+    fetch("/api/market-indices")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.data?.length > 0) setIndices(json.data);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div
       className="flex items-center gap-0 overflow-x-auto no-scrollbar border-b"
       style={{ background: "var(--bg)", borderColor: "var(--border)" }}
     >
-      {INDICES.map((idx) => (
+      {indices.map((idx) => (
         <div
           key={idx.label}
           className="flex items-center gap-2 px-4 py-2 shrink-0 border-r"
