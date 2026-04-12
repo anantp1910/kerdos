@@ -179,7 +179,8 @@ export default function SmartSwipePage() {
             <div className="flex items-baseline gap-1.5 flex-1 justify-end">
               <span style={{ fontSize: 34, fontWeight: 300, color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-display)", lineHeight: 1 }}>$</span>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && analyze()}
