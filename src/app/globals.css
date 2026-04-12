@@ -135,3 +135,120 @@ body {
 /* ── Positive / Negative ── */
 .pos { color: var(--green); }
 .neg { color: var(--red); }
+
+/* ── RewardVest charts ── */
+.chart-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background:
+    radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 44%),
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.2)),
+    #141414;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -24px 60px rgba(0,0,0,0.25),
+    0 24px 70px rgba(0,0,0,0.28);
+  isolation: isolate;
+}
+
+.chart-stage::before {
+  content: "";
+  position: absolute;
+  inset: auto 10% -24% 10%;
+  height: 46%;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(0,0,0,0.48));
+  transform: perspective(1000px) rotateX(72deg);
+  transform-origin: bottom;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.chart-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.38), transparent 100%);
+  pointer-events: none;
+}
+
+.chart-stage-green {
+  background:
+    radial-gradient(circle at top, rgba(52,211,153,0.2), transparent 42%),
+    linear-gradient(180deg, rgba(9,23,15,0.95), rgba(4,10,7,0.98));
+}
+
+.chart-stage-blue {
+  background:
+    radial-gradient(circle at top, rgba(96,165,250,0.22), transparent 42%),
+    linear-gradient(180deg, rgba(7,17,28,0.95), rgba(5,8,16,0.98));
+}
+
+.chart-stage-cyan {
+  background:
+    radial-gradient(circle at top, rgba(34,211,238,0.22), transparent 42%),
+    linear-gradient(180deg, rgba(4,19,22,0.95), rgba(3,9,11,0.98));
+}
+
+.chart-stage-gold {
+  background:
+    radial-gradient(circle at top, rgba(251,191,36,0.2), transparent 42%),
+    linear-gradient(180deg, rgba(24,17,5,0.95), rgba(10,8,4,0.98));
+}
+
+.chart-stage-violet {
+  background:
+    radial-gradient(circle at top, rgba(192,132,252,0.22), transparent 42%),
+    linear-gradient(180deg, rgba(19,10,29,0.95), rgba(8,5,13,0.98));
+}
+
+.chart-stage-orange {
+  background:
+    radial-gradient(circle at top, rgba(249,115,22,0.22), transparent 42%),
+    linear-gradient(180deg, rgba(28,13,6,0.95), rgba(12,7,4,0.98));
+}
+
+.chart-tilt {
+  position: relative;
+  z-index: 1;
+  transform: perspective(1400px) rotateX(10deg);
+  transform-origin: center top;
+}
+
+.chart-sheen {
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 34%;
+  height: 140%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.chart-orb-shell {
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255,255,255,0.12), transparent 35%),
+    radial-gradient(circle at 50% 100%, rgba(0,0,0,0.42), transparent 58%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 26px 70px rgba(0,0,0,0.35);
+}
+
+@media (max-width: 768px) {
+  .chart-stage {
+    padding: 10px;
+  }
+
+  .chart-tilt {
+    transform: perspective(1000px) rotateX(6deg);
+  }
+}

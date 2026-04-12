@@ -15,10 +15,19 @@ import {
   ComposedChart,
   Line,
   Bar,
+  CartesianGrid,
   ReferenceLine,
 } from "recharts";
 import MarketTicker from "@/components/MarketTicker";
-import { USER_CARDS } from "@/lib/userCards";
+import { getMonthlyChart, getStore, getThisMonth } from "@/lib/rewardsStore";
+import {
+  logInvestment,
+  getPortfolioValue,
+  getPortfolioGain,
+  getUninvestedBalance,
+  type InvestmentAllocation,
+} from "@/lib/investmentStore";
+import { getMarketClock, getMarketStatusLabel } from "@/lib/marketHours";
 
 interface StockData {
   ticker: string;
@@ -29,32 +38,22 @@ interface StockData {
 }
 
 const STOCK_TICKERS: StockData[] = [
-  { ticker: 'VOO',  name: 'Vanguard S&P 500',   price: 498.32, change:  3.21, changePct:  0.65 },
-  { ticker: 'QQQ',  name: 'Invesco Nasdaq 100',  price: 432.18, change:  5.44, changePct:  1.27 },
-  { ticker: 'SPY',  name: 'SPDR S&P 500',        price: 521.67, change:  2.89, changePct:  0.56 },
-  { ticker: 'VTI',  name: 'Vanguard Total Mkt',  price: 242.53, change: -0.87, changePct: -0.36 },
-  { ticker: 'ARKK', name: 'ARK Innovation',      price: 47.83,  change:  1.22, changePct:  2.62 },
-  { ticker: 'BND',  name: 'Vanguard Bond',       price: 73.14,  change: -0.12, changePct: -0.16 },
+  { ticker: "VOO",  name: "Vanguard S&P 500",  price: 498.32, change:  3.21, changePct:  0.65 },
+  { ticker: "QQQ",  name: "Invesco Nasdaq 100", price: 432.18, change:  5.44, changePct:  1.27 },
+  { ticker: "SPY",  name: "SPDR S&P 500",       price: 521.67, change:  2.89, changePct:  0.56 },
+  { ticker: "VTI",  name: "Vanguard Total Mkt", price: 242.53, change: -0.87, changePct: -0.36 },
+  { ticker: "ARKK", name: "ARK Innovation",     price: 47.83,  change:  1.22, changePct:  2.62 },
+  { ticker: "BND",  name: "Vanguard Bond",      price: 73.14,  change: -0.12, changePct: -0.16 },
 ];
 
-const ALLOCATION_COLORS = ["#4ade80", "#60a5fa", "#a78bfa", "#fbbf24", "#f87171"];
-
-const CHART_DATA = [
-  { month: "Nov", value: 210 },
-  { month: "Dec", value: 248 },
-  { month: "Jan", value: 275 },
-  { month: "Feb", value: 292 },
-  { month: "Mar", value: 318 },
-  { month: "Apr", value: 80 },
-];
-
-const MONTHLY_EARNINGS = CHART_DATA.map((d) => d.value);
+const ALLOCATION_COLORS = ["#00c805", "#60a5fa", "#a78bfa", "#fbbf24", "#f87171"];
 
 interface Allocation {
   ticker: string;
   percentage: number;
   rationale: string;
   description: string;
+  annualReturn?: number;
 }
 
 interface MarketRegime {
@@ -74,57 +73,99 @@ interface AIAdvice {
   threshold: number;
 }
 
-const COLOR_MAP: Record<string, string> = {
-  amex: '#60a5fa', chase: '#a78bfa', citi: '#22d3ee', discover: '#fb923c', capital: '#4ade80',
+const RETURN_RATES: Record<string, number> = {
+  VOO: 8.5, QQQ: 12.0, VTI: 8.2, BND: 3.5,
+  CASH: 4.5, ARKK: 15.0, GLD: 7.0, JEPI: 9.0,
 };
+
+function shadeHex(hex: string, multiplier: number) {
+  const normalized = hex.replace("#", "");
+  const fullHex = normalized.length === 3
+    ? normalized.split("").map((char) => `${char}${char}`).join("")
+    : normalized;
+
+  const segments = fullHex.match(/.{2}/g);
+  if (!segments) return hex;
+
+  const shaded = segments
+    .map((segment) =>
+      Math.max(0, Math.min(255, Math.round(parseInt(segment, 16) * multiplier)))
+        .toString(16)
+        .padStart(2, "0")
+    )
+    .join("");
+
+  return `#${shaded}`;
+}
+
+function formatMoneyTick(value: number) {
+  if (Math.abs(value) >= 1000) return `$${(value / 1000).toFixed(0)}k`;
+  return `$${Math.round(value)}`;
+}
 
 export default function RewardVestPage() {
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [apiCards, setApiCards] = useState<{ id: string; cardName: string }[]>([]);
 
-  // Market data state
+  // Rewards store
+  const [chartData, setChartData] = useState<{ month: string; value: number }[]>([]);
+  const [totalEarned, setTotalEarned] = useState(0);
+  const [thisMonth, setThisMonth] = useState(0);
+
+  // Investment store
+  const [portfolioGain, setPortfolioGain] = useState(0);
+  const [uninvestedBalance, setUninvestedBalance] = useState(0);
+  const [investmentConfirmed, setInvestmentConfirmed] = useState(false);
+  const [livePortfolioValue, setLivePortfolioValue] = useState(0);
+
+  // Market data
   const [marketData, setMarketData] = useState<StockData[]>(STOCK_TICKERS);
   const [marketLoading, setMarketLoading] = useState(true);
+  const [marketClock, setMarketClock] = useState(() => getMarketClock());
 
-  // NQ microstructure analysis state
+  // NQ microstructure
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [nqBars, setNqBars] = useState<any[]>([]);
   const [nqDate, setNqDate] = useState<string>("");
   const [nqDates, setNqDates] = useState<string[]>([]);
 
-  const totalEarned = Object.values(USER_CARDS).reduce((s, c) => s + c.totalEarned, 0);
-  const thisMonth = CHART_DATA[CHART_DATA.length - 1].value;
+  useEffect(() => {
+    const monthly = getMonthlyChart();
+    setChartData(monthly);
+    setTotalEarned(getStore().totalEarned);
+    const tm = getThisMonth();
+    setThisMonth(tm);
+    const pv = getPortfolioValue();
+    const pg = getPortfolioGain();
+    setPortfolioGain(pg);
+    setLivePortfolioValue(pv);
+    setUninvestedBalance(getUninvestedBalance(tm));
+  }, []);
 
-  // Fetch live market data on mount
+  useEffect(() => {
+    const tick = () => setMarketClock(getMarketClock());
+    tick();
+    const interval = setInterval(tick, 15_000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     async function fetchMarket() {
       try {
         const res = await fetch("/api/market");
         const json = await res.json();
-        if (json.data && json.data.length > 0) {
-          setMarketData(json.data);
-        }
-      } catch {
-        // Silently fall back to mock data
-      } finally {
+        if (json.data && json.data.length > 0) setMarketData(json.data);
+      } catch { /* fallback */ } finally {
         setMarketLoading(false);
       }
     }
     fetchMarket();
-  }, []);
+    const interval = setInterval(fetchMarket, marketClock.isOpen ? 60_000 : 15 * 60_000);
+    return () => clearInterval(interval);
+  }, [marketClock.isOpen]);
 
-  // Fetch live card data from Plaid/rewards API
-  useEffect(() => {
-    fetch("/api/rewards")
-      .then(r => r.json())
-      .then(setApiCards)
-      .catch(() => {});
-  }, []);
-
-  // Fetch NQ microstructure data
   useEffect(() => {
     async function fetchNQ() {
       try {
@@ -138,39 +179,41 @@ export default function RewardVestPage() {
         const dayJson = await dayRes.json();
         setNqBars(dayJson.bars ?? []);
         setNqDate(dayJson.date ?? latest);
-      } catch {
-        // silently skip
-      }
+      } catch { /* skip */ }
     }
     fetchNQ();
   }, []);
 
-  // Simulate live market ticks for the dashboard UI
   useEffect(() => {
     const interval = setInterval(() => {
-      setMarketData((prev) => 
+      if (!getMarketClock().isOpen) return;
+      setMarketData((prev) =>
         prev.map((stock) => {
-          // Add small random noise to simulate a live Bloomberg feed
-          const volatility = stock.ticker === 'ARKK' || stock.ticker === 'QQQ' ? 0.0015 : 0.0005;
+          const volatility = stock.ticker === "ARKK" || stock.ticker === "QQQ" ? 0.0015 : 0.0005;
           const randomMove = 1 + (Math.random() * volatility * 2 - volatility);
           const newPrice = stock.price * randomMove;
-          const originalStartPrice = stock.price - stock.change;
+          const originalStartPrice = stock.price - (stock.change ?? 0);
           const newChange = newPrice - originalStartPrice;
-          const newChangePct = (newChange / originalStartPrice) * 100;
-          
-          return {
-            ...stock,
-            price: newPrice,
-            change: newChange,
-            changePct: newChangePct
-          };
+          return { ...stock, price: newPrice, change: newChange, changePct: (newChange / originalStartPrice) * 100 };
         })
       );
-    }, 1500);
+    }, 4_000);
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-show default portfolio on mount (mock until AI generates)
+  useEffect(() => {
+    const syncPortfolio = () => {
+      const nextValue = getPortfolioValue();
+      setPortfolioGain(getPortfolioGain());
+      setLivePortfolioValue(nextValue);
+    };
+
+    syncPortfolio();
+
+    const tick = setInterval(syncPortfolio, 15_000);
+    return () => clearInterval(tick);
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setShowPortfolio(true), 600);
     return () => clearTimeout(t);
@@ -189,26 +232,18 @@ export default function RewardVestPage() {
     setIsGenerating(true);
     setShowPortfolio(false);
     setAiError(null);
-
     try {
       const res = await fetch("/api/ai-advice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           totalRewards: totalEarned,
-          monthlyEarnings: MONTHLY_EARNINGS,
+          monthlyEarnings: [...chartData.slice(0, -1).map((d) => d.value), uninvestedBalance],
           riskTolerance: "moderate",
         }),
       });
-
       const json = await res.json();
-
-      if (json.error) {
-        setAiError(json.error);
-        setShowPortfolio(true);
-        return;
-      }
-
+      if (json.error) { setAiError(json.error); setShowPortfolio(true); return; }
       setAiAdvice(json.data);
       setShowPortfolio(true);
     } catch {
@@ -217,552 +252,818 @@ export default function RewardVestPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [totalEarned]);
+  }, [totalEarned, chartData, uninvestedBalance]);
 
-  // Derive display data — use AI response if available, else defaults
   const displayAllocations: Allocation[] = aiAdvice?.allocations ?? [
-    { ticker: "VOO", percentage: 60, rationale: "Broad market exposure via S&P 500", description: "Vanguard S&P 500 ETF" },
-    { ticker: "QQQ", percentage: 25, rationale: "Tech-heavy growth exposure", description: "Invesco Nasdaq 100" },
-    { ticker: "CASH", percentage: 15, rationale: "Liquidity reserve for dip buying", description: "High-yield savings reserve" },
+    { ticker: "VOO",  percentage: 60, rationale: "Broad market exposure via S&P 500", description: "Vanguard S&P 500 ETF" },
+    { ticker: "QQQ",  percentage: 25, rationale: "Tech-heavy growth exposure",        description: "Invesco Nasdaq 100" },
+    { ticker: "CASH", percentage: 15, rationale: "Liquidity reserve for dip buying",  description: "High-yield savings reserve" },
   ];
 
   const displayInsights: string[] = aiAdvice?.insights ?? [
     "VOO has outperformed 94% of actively managed funds over the past 10 years — ideal anchor for your rewards.",
-    "At your current earning rate of $340/mo, compounding at 7% annual return = $48,200 in 10 years.",
+    "At your current earning rate, compounding at 7% annual return builds serious wealth over 10 years.",
     "Maintaining 15% cash reserve gives flexibility to buy dips without liquidating positions.",
   ];
 
   const projectedReturn = aiAdvice?.projectedAnnualReturn ?? 7;
   const projectedAnnual = thisMonth * 12;
   const tenYearGrowth = Math.round(
-    thisMonth * 12 * ((Math.pow(1 + projectedReturn / 100, 10) - 1) / (projectedReturn / 100))
+    projectedReturn === 0
+      ? thisMonth * 12 * 10
+      : thisMonth * 12 * ((Math.pow(1 + projectedReturn / 100, 10) - 1) / (projectedReturn / 100))
   );
+  const marketStatusLabel = getMarketStatusLabel(marketClock);
+  const marketStatusColor = marketClock.isOpen ? "var(--green)" : "#fbbf24";
+  const rewardTrendData = chartData.map((point, index) => ({
+    ...point,
+    cap: point.value * 1.05,
+    shadow: point.value * 0.84,
+    focus: index === chartData.length - 1 ? point.value : null,
+  }));
+  const projectionData = Array.from({ length: 121 }, (_, monthIndex) => {
+    const monthlyRate = projectedReturn / 1200;
+    const invested = Math.round(thisMonth * monthIndex);
+    const portfolio = monthIndex === 0
+      ? 0
+      : monthlyRate === 0
+      ? invested
+      : Math.round(thisMonth * ((Math.pow(1 + monthlyRate, monthIndex) - 1) / monthlyRate));
+
+    return {
+      label: monthIndex % 12 === 0 ? `Y${monthIndex / 12}` : "",
+      monthIndex,
+      invested,
+      portfolio,
+      halo: portfolio * 1.02,
+    };
+  });
+
+  const cardStyle = {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "14px",
+  };
+
+  const innerCardStyle = {
+    background: "var(--surface-2)",
+    border: "1px solid var(--border)",
+    borderRadius: "10px",
+  };
+
+  const labelStyle = "text-[10px] font-bold tracking-widest uppercase" as const;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      {/* Header */}
       <div className="px-4 pt-12 pb-3">
-        <span className="text-[10px] font-bold tracking-widest" style={{ color: "#5ac8fa" }}>INVEST</span>
-        <h1 className="text-2xl font-bold text-white mt-1">AI Investment Advisor</h1>
+        <span className={labelStyle} style={{ color: "var(--green)" }}>RewardVest</span>
+        <h1 className="text-2xl font-bold text-white mt-0.5">AI Investment Advisor</h1>
+        <p className="text-xs mt-0.5" style={{ color: "var(--text-2)" }}>
+          Bloomberg NQ · Real-time portfolio tracking
+        </p>
       </div>
-      <MarketTicker data={marketData} />
+      <MarketTicker />
 
-      <div className="pt-4 pb-6 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-10"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-400/10 border border-blue-400/20 text-blue-400 text-xs font-medium mb-4">
-              📈 RewardVest
-            </div>
-            <h1 className="text-4xl font-bold text-white">
-              AI Investment Advisor
-            </h1>
-            <p className="text-white/40 mt-2 text-lg">
-              Your rewards aren&apos;t just points — they&apos;re investable capital.
-            </p>
-          </motion.div>
+      <div className="px-4 pt-4 pb-6 max-w-6xl mx-auto">
 
-          {/* Top stats bar */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[
-              { label: "This Month", value: `$${thisMonth}`, sub: "earned in rewards", color: "text-green-400" },
-              { label: "Total Earned", value: `$${totalEarned.toLocaleString()}`, sub: "all time", color: "text-blue-400" },
-              { label: "Projected Annual", value: `$${projectedAnnual.toLocaleString()}`, sub: "at current rate", color: "text-purple-400" },
-              { label: "10-Year Growth", value: `$${tenYearGrowth.toLocaleString()}`, sub: `at ${projectedReturn}% return`, color: "text-yellow-400" },
-            ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * i }}
-                className="p-4 rounded-xl bg-white/[0.03] border border-white/8"
-              >
-                <p className="text-xs text-white/40 mb-1">{s.label}</p>
-                <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-white/30 mt-0.5">{s.sub}</p>
-              </motion.div>
-            ))}
+        {/* ── Stats row ───────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+          {[
+            { label: "This Month",          value: `$${thisMonth.toFixed(2)}`,             sub: "earned",                       color: "var(--green)" },
+            { label: "Available to Invest", value: `$${uninvestedBalance.toFixed(2)}`,     sub: "uninvested",                   color: "#60a5fa"      },
+            {
+              label: "Portfolio Value",
+              value: `$${livePortfolioValue.toFixed(2)}`,
+              sub: portfolioGain >= 0 ? `+$${portfolioGain.toFixed(2)} gain` : `-$${Math.abs(portfolioGain).toFixed(2)} loss`,
+              hint: marketStatusLabel,
+              color: portfolioGain >= 0 ? "var(--green)" : "var(--red)",
+            },
+            { label: "Projected Annual",    value: `$${projectedAnnual.toLocaleString()}`, sub: "at current rate",              color: "#a78bfa"      },
+            { label: "10-Year Growth",      value: `$${tenYearGrowth.toLocaleString()}`,   sub: `at ${projectedReturn}% return`, color: "#fbbf24"     },
+          ].map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i }}
+              className="p-4"
+              style={cardStyle}
+            >
+              <p className={`${labelStyle} mb-2`} style={{ color: "var(--text-2)" }}>{s.label}</p>
+              <p className="text-xl font-bold" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-2)" }}>{s.sub}</p>
+              {"hint" in s && s.hint && (
+                <p className="text-[10px] mt-2 font-semibold" style={{ color: marketStatusColor }}>
+                  {s.hint}
+                </p>
+              )}
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ── Main grid ───────────────────────────── */}
+        <div className="grid lg:grid-cols-3 gap-4">
+
+          {/* Left col */}
+          <div className="lg:col-span-2 space-y-4">
+
+            {/* Rewards earned chart */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+              className="p-5"
+              style={cardStyle}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className={labelStyle} style={{ color: "var(--text-2)" }}>Rewards Earned</p>
+                  <p className="text-sm font-semibold text-white mt-0.5">6-month trend, lifted into a live 3D surface</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold" style={{ color: "var(--green)" }}>${thisMonth.toFixed(2)}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: "var(--text-2)" }}>
+                    {(() => {
+                      const prev = chartData[chartData.length - 2]?.value ?? 0;
+                      const curr = chartData[chartData.length - 1]?.value ?? 0;
+                      if (prev === 0) return "No prior data";
+                      const pct = Math.round(((curr - prev) / prev) * 100);
+                      return `${pct >= 0 ? "↑" : "↓"} ${Math.abs(pct)}% vs last month`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+              <div className="chart-stage chart-stage-green">
+                <motion.div
+                  className="chart-sheen"
+                  animate={{ x: ["-30%", "120%"] }}
+                  transition={{ duration: 5.5, repeat: Infinity, ease: "linear" }}
+                />
+                <div className="chart-tilt" style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={rewardTrendData} margin={{ top: 18, right: 16, bottom: 10, left: 8 }}>
+                      <defs>
+                        <linearGradient id="rewardShadow" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(0,0,0,0.34)" />
+                          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+                        </linearGradient>
+                        <linearGradient id="rewardCap" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(34,197,94,0.42)" />
+                          <stop offset="100%" stopColor="rgba(34,197,94,0)" />
+                        </linearGradient>
+                        <linearGradient id="rewardGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#34d399" stopOpacity={0.95} />
+                          <stop offset="55%" stopColor="#00c805" stopOpacity={0.22} />
+                          <stop offset="100%" stopColor="#00c805" stopOpacity={0.02} />
+                        </linearGradient>
+                        <filter id="rewardGlow" x="-40%" y="-40%" width="180%" height="180%">
+                          <feDropShadow dx="0" dy="18" stdDeviation="18" floodColor="#00c805" floodOpacity="0.18" />
+                        </filter>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.07)" strokeDasharray="4 8" />
+                      <XAxis dataKey="month" tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={formatMoneyTick} />
+                      <Tooltip
+                        cursor={{ stroke: "rgba(52,211,153,0.5)", strokeWidth: 1, strokeDasharray: "4 4" }}
+                        contentStyle={{ background: "rgba(7,12,10,0.92)", border: "1px solid rgba(52,211,153,0.28)", borderRadius: 14, fontSize: 12, color: "white", boxShadow: "0 18px 60px rgba(0,0,0,0.34)" }}
+                        formatter={(v) => [`$${Number(v).toFixed(2)}`, "Rewards"]}
+                      />
+                      <Area type="monotone" dataKey="shadow" stroke="transparent" fill="url(#rewardShadow)" fillOpacity={1} isAnimationActive />
+                      <Area type="monotone" dataKey="cap" stroke="transparent" fill="url(#rewardCap)" fillOpacity={1} isAnimationActive />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#5efc8d"
+                        strokeWidth={3}
+                        fill="url(#rewardGrad)"
+                        dot={false}
+                        activeDot={{ r: 6, fill: "#ffffff", stroke: "#00c805", strokeWidth: 3 }}
+                        filter="url(#rewardGlow)"
+                        isAnimationActive
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Live market feed */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="p-5"
+              style={cardStyle}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className={labelStyle} style={{ color: "var(--text-2)" }}>Live Market</p>
+                  <p className="text-sm font-semibold text-white mt-0.5">ETF watchlist</p>
+                </div>
+                <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: marketLoading ? "var(--text-2)" : marketStatusColor }}>
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${marketClock.isOpen ? "animate-pulse" : ""}`}
+                    style={{ background: marketLoading ? "var(--text-2)" : marketStatusColor }}
+                  />
+                  {marketLoading ? "Loading..." : marketClock.isOpen ? "Live" : "Closed"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                {marketData.map((s) => (
+                  <div
+                    key={s.ticker}
+                    className="p-3 relative overflow-hidden"
+                    style={{
+                      ...innerCardStyle,
+                      boxShadow: s.changePct >= 0
+                        ? "inset 0 1px 0 rgba(255,255,255,0.06), 0 12px 30px rgba(0,200,5,0.08)"
+                        : "inset 0 1px 0 rgba(255,255,255,0.06), 0 12px 30px rgba(255,59,48,0.08)",
+                    }}
+                  >
+                    <div
+                      className="absolute inset-x-0 bottom-0 h-16"
+                      style={{
+                        background: s.changePct >= 0
+                          ? "linear-gradient(180deg, rgba(0,200,5,0), rgba(0,200,5,0.14))"
+                          : "linear-gradient(180deg, rgba(255,59,48,0), rgba(255,59,48,0.14))",
+                      }}
+                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-white font-mono">{s.ticker}</span>
+                      <span className="text-[11px] font-semibold" style={{ color: s.changePct >= 0 ? "var(--green)" : "var(--red)" }}>
+                        {s.changePct >= 0 ? "▲" : "▼"} {Math.abs(s.changePct).toFixed(2)}%
+                      </span>
+                    </div>
+                    <p className="text-base font-bold text-white relative">${s.price.toFixed(2)}</p>
+                    <p className="text-[10px] truncate mt-0.5 relative" style={{ color: "var(--text-2)" }}>{s.name}</p>
+                    <div className="mt-3 h-1.5 rounded-full overflow-hidden relative" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <motion.div
+                        className="h-full rounded-full"
+                        initial={false}
+                        animate={{ width: `${Math.min(Math.max(Math.abs(s.changePct) * 16, 18), 100)}%` }}
+                        transition={{ type: "spring", stiffness: 120, damping: 18 }}
+                        style={{
+                          background: s.changePct >= 0
+                            ? "linear-gradient(90deg, #00c805, #5efc8d)"
+                            : "linear-gradient(90deg, #ff3b30, #fb7185)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Generate button */}
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="w-full py-4 rounded-2xl font-bold text-base transition-all disabled:opacity-50"
+              style={{ background: isGenerating ? "var(--surface-2)" : "var(--green)", color: isGenerating ? "var(--text-2)" : "#000" }}
+            >
+              {isGenerating ? (
+                <span className="flex items-center justify-center gap-3">
+                  <motion.span
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="inline-block w-4 h-4 border-2 border-black/20 border-t-black rounded-full"
+                  />
+                  Analyzing Bloomberg signals...
+                </span>
+              ) : (
+                "Generate AI Portfolio Split →"
+              )}
+            </motion.button>
+
+            {aiError && (
+              <div className="p-3 rounded-xl text-sm" style={{ background: "var(--red-dim)", border: "1px solid var(--red)", color: "var(--red)" }}>
+                {aiError}
+              </div>
+            )}
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left col — Chart + Market + Generate */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Earnings chart */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="p-6 rounded-2xl bg-white/[0.03] border border-white/8"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="font-semibold text-white">Rewards Earned</h3>
-                    <p className="text-xs text-white/40">6-month trend</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-green-400">${thisMonth}</p>
-                    <p className="text-xs text-green-400">
-                      ↑ {Math.round(((CHART_DATA[CHART_DATA.length - 1].value - CHART_DATA[CHART_DATA.length - 2].value) / CHART_DATA[CHART_DATA.length - 2].value) * 100)}% vs last month
-                    </p>
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={CHART_DATA}>
-                    <defs>
-                      <linearGradient id="rewardGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#4ade80" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#4ade80" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis
-                      dataKey="month"
-                      tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => `$${v}`}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "#1a1a2e",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "8px",
-                        color: "white",
-                        fontSize: "12px",
-                      }}
-                      formatter={(v) => [`$${v}`, "Rewards"]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#4ade80"
-                      strokeWidth={2}
-                      fill="url(#rewardGrad)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </motion.div>
+          {/* Right col */}
+          <div className="space-y-4">
 
-              {/* Live market feed */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="p-6 rounded-2xl bg-white/[0.03] border border-white/8"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-white">Live Market</h3>
-                  <span className="text-xs text-green-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    {marketLoading ? "Loading..." : "Market Open"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                  {marketData.map((s, i) => (
-                    <motion.div
-                      key={s.ticker}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.05 * i }}
-                      className="p-3 rounded-xl bg-white/5 border border-white/8 hover:border-white/15 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-white">{s.ticker}</span>
-                        <span
-                          className="text-xs font-medium"
-                          style={{ color: s.changePct >= 0 ? "#4ade80" : "#f87171" }}
-                        >
-                          {s.changePct >= 0 ? "▲" : "▼"}{" "}
-                          {Math.abs(s.changePct).toFixed(2)}%
-                        </span>
-                      </div>
-                      <p className="text-lg font-bold text-white">${s.price.toFixed(2)}</p>
-                      <p className="text-[10px] text-white/30 truncate">{s.name}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* AI Generate button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 disabled:opacity-50 text-white font-bold text-lg transition-all duration-200"
-              >
-                {isGenerating ? (
-                  <span className="flex items-center justify-center gap-3">
-                    <motion.span
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                    />
-                    AI Analyzing Market Signals...
-                  </span>
-                ) : (
-                  "🤖 Generate AI Investment Split →"
-                )}
-              </motion.button>
-
-              {/* AI Error message */}
-              {aiError && (
+            {/* Portfolio card */}
+            <AnimatePresence mode="wait">
+              {showPortfolio ? (
                 <motion.div
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm"
+                  key="portfolio"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  className="p-5"
+                  style={cardStyle}
                 >
-                  {aiError}
-                </motion.div>
-              )}
-            </div>
-
-            {/* Right col — Portfolio + Insights + Card Breakdown */}
-            <div className="space-y-6">
-              <AnimatePresence mode="wait">
-                {showPortfolio ? (
-                  <motion.div
-                    key="portfolio"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="p-6 rounded-2xl bg-gradient-to-b from-blue-500/10 to-purple-500/5 border border-blue-400/20"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-white">
-                        {aiAdvice ? "AI Portfolio" : "Suggested Portfolio"}
-                      </h3>
-                      {aiAdvice && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-400/10 text-green-400 border border-green-400/20">
-                          AI Generated
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-white/40 mb-6">
-                      For your ${thisMonth} in rewards this month
+                  <div className="flex items-center justify-between mb-1">
+                    <p className={labelStyle} style={{ color: "var(--text-2)" }}>
+                      {aiAdvice ? "AI Portfolio" : "Suggested Portfolio"}
                     </p>
+                    {aiAdvice && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "var(--green-dim)", color: "var(--green)" }}>
+                        AI Generated
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-white mb-5">
+                    ${uninvestedBalance.toFixed(2)} available this month
+                  </p>
 
-                    {/* Donut */}
-                    <div className="flex justify-center mb-6">
-                      <div className="relative">
-                        <PieChart width={180} height={180}>
+                  {/* Donut */}
+                  <div className="flex justify-center mb-5">
+                    <div className="relative chart-orb-shell">
+                      <PieChart width={210} height={190}>
+                        <defs>
+                          <filter id="donutGlow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="0" dy="22" stdDeviation="18" floodColor="#0b1020" floodOpacity="0.45" />
+                          </filter>
+                        </defs>
+                        {[12, 9, 6, 3].map((offset) => (
                           <Pie
+                            key={offset}
                             data={displayAllocations}
-                            cx={90}
-                            cy={90}
-                            innerRadius={55}
-                            outerRadius={85}
-                            paddingAngle={3}
+                            cx={105}
+                            cy={92 + offset}
+                            innerRadius={56}
+                            outerRadius={88}
+                            paddingAngle={2}
                             dataKey="percentage"
                             startAngle={90}
                             endAngle={-270}
+                            stroke="transparent"
+                            isAnimationActive={false}
                           >
                             {displayAllocations.map((_, i) => (
                               <Cell
-                                key={i}
-                                fill={ALLOCATION_COLORS[i % ALLOCATION_COLORS.length]}
-                                stroke="transparent"
+                                key={`${offset}-${i}`}
+                                fill={shadeHex(ALLOCATION_COLORS[i % ALLOCATION_COLORS.length], 0.48 + offset * 0.018)}
                               />
                             ))}
                           </Pie>
-                        </PieChart>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <p className="text-xl font-bold text-white">${thisMonth}</p>
-                          <p className="text-[10px] text-white/40">to invest</p>
-                        </div>
+                        ))}
+                        <Pie
+                          data={displayAllocations}
+                          cx={105}
+                          cy={88}
+                          innerRadius={56}
+                          outerRadius={88}
+                          paddingAngle={3}
+                          dataKey="percentage"
+                          startAngle={90}
+                          endAngle={-270}
+                          filter="url(#donutGlow)"
+                        >
+                          {displayAllocations.map((_, i) => (
+                            <Cell key={i} fill={ALLOCATION_COLORS[i % ALLOCATION_COLORS.length]} stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <p className="text-xl font-bold text-white">${uninvestedBalance.toFixed(0)}</p>
+                        <p className={`${labelStyle} mt-0.5`} style={{ color: "var(--text-2)" }}>to invest</p>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Market regime badge */}
-                    {aiAdvice?.marketRegime && (
-                      <div className="mb-4 space-y-3">
-                        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                          <p className="text-[10px] text-white/40 mb-1">Market Conditions</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-white capitalize">
-                              {aiAdvice.marketRegime.regime === "bullish" ? "📈" : aiAdvice.marketRegime.regime === "defensive" ? "🛡️" : "⚖️"} {aiAdvice.marketRegime.regime}
-                            </span>
-                            <span className="text-[10px] text-white/40">
-                              {aiAdvice.marketRegime.volatility} volatility
-                            </span>
+                  {/* Market regime */}
+                  {aiAdvice?.marketRegime && (
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between p-3" style={innerCardStyle}>
+                        <span className="text-xs font-medium text-white capitalize">
+                          {aiAdvice.marketRegime.regime === "bullish" ? "📈" : aiAdvice.marketRegime.regime === "defensive" ? "🛡️" : "⚖️"} {aiAdvice.marketRegime.regime}
+                        </span>
+                        <span className={labelStyle} style={{ color: "var(--text-2)" }}>{aiAdvice.marketRegime.volatility} vol</span>
+                      </div>
+
+                      {aiAdvice.marketRegime.bquantScore !== undefined && (
+                        <div className="p-3" style={innerCardStyle}>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className={labelStyle} style={{ color: "var(--text-2)" }}>BQuant Score</p>
+                            <p className="text-xs font-mono font-bold" style={{
+                              color: aiAdvice.marketRegime.bquantScore >= 6.5 ? "var(--green)"
+                                : aiAdvice.marketRegime.bquantScore <= 4 ? "var(--red)" : "#fbbf24"
+                            }}>
+                              {aiAdvice.marketRegime.bquantScore.toFixed(1)} / 10
+                            </p>
+                          </div>
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-3)" }}>
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${aiAdvice.marketRegime.bquantScore * 10}%` }}
+                              transition={{ duration: 0.8, ease: "easeOut" }}
+                              className="h-full rounded-full"
+                              style={{
+                                background: aiAdvice.marketRegime.bquantScore >= 6.5
+                                  ? "linear-gradient(90deg, var(--green), #22d3ee)"
+                                  : aiAdvice.marketRegime.bquantScore <= 4
+                                  ? "linear-gradient(90deg, var(--red), #fb923c)"
+                                  : "linear-gradient(90deg, #fbbf24, #a78bfa)",
+                              }}
+                            />
                           </div>
                         </div>
+                      )}
 
-                        {aiAdvice.marketRegime.bloombergPrediction && (
-                          <motion.div 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-3 rounded-lg bg-black border border-orange-500/30 shadow-[0_0_10px_rgba(249,115,22,0.1)] relative overflow-hidden"
-                          >
-                            <div className="absolute top-0 left-0 w-1 h-full bg-orange-500" />
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-[10px] font-mono text-orange-400">⚡ BLOOMBERG BQUANT™</p>
-                              <p className="text-[10px] font-mono text-orange-400/60">Score: {aiAdvice.marketRegime.bquantScore}</p>
-                            </div>
-                            <p className="text-xs font-mono text-orange-100 leading-relaxed">
-                              {aiAdvice.marketRegime.bloombergPrediction}
-                            </p>
-                          </motion.div>
-                        )}
-                      </div>
-                    )}
+                      {aiAdvice.marketRegime.bloombergPrediction && (
+                        <div className="p-3 relative overflow-hidden" style={{ background: "#0a0a0a", border: "1px solid #f97316aa", borderRadius: 10 }}>
+                          <div className="absolute top-0 left-0 w-0.5 h-full" style={{ background: "#f97316" }} />
+                          <div className="flex items-center justify-between mb-1.5 pl-2">
+                            <p className="text-[10px] font-mono font-bold" style={{ color: "#f97316" }}>⚡ BLOOMBERG BQUANT™</p>
+                            <p className="text-[10px] font-mono" style={{ color: "var(--text-2)" }}>Score: {aiAdvice.marketRegime.bquantScore}</p>
+                          </div>
+                          <p className="text-[11px] font-mono leading-relaxed pl-2" style={{ color: "#fed7aa" }}>
+                            {aiAdvice.marketRegime.bloombergPrediction}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                    {/* Breakdown */}
-                    <div className="space-y-3">
-                      {displayAllocations.map((p, i) => {
-                        const dollarAmount = ((p.percentage / 100) * thisMonth).toFixed(0);
+                  {/* Allocation breakdown */}
+                  <div className="space-y-3">
+                    {(() => {
+                      const maxRate = Math.max(...displayAllocations.map((p) => p.annualReturn ?? RETURN_RATES[p.ticker] ?? 5));
+                      return displayAllocations.map((p, i) => {
+                        const dollarAmount = ((p.percentage / 100) * uninvestedBalance).toFixed(0);
+                        const rate = p.annualReturn ?? RETURN_RATES[p.ticker] ?? 5;
                         return (
-                          <div key={p.ticker} className="flex items-center gap-3">
-                            <div
-                              className="w-3 h-3 rounded-sm flex-shrink-0"
-                              style={{ background: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}
-                            />
+                          <div key={p.ticker} className="flex items-start gap-3">
+                            <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0 mt-1" style={{ background: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }} />
                             <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-center">
-                                <span className="text-sm font-semibold text-white">
-                                  {p.ticker}
-                                </span>
-                                <span className="text-sm font-bold text-white">
-                                  ${dollarAmount}
-                                </span>
+                              <div className="flex justify-between items-baseline">
+                                <span className="text-sm font-bold text-white">{p.ticker}</span>
+                                <span className="text-sm font-bold text-white">${dollarAmount}</span>
                               </div>
-                              <div className="flex justify-between items-center mt-0.5">
-                                <span className="text-[10px] text-white/40 truncate">
-                                  {p.description}
-                                </span>
-                                <span
-                                  className="text-[10px] font-medium"
-                                  style={{ color: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}
-                                >
+                              <div className="flex justify-between items-center mt-0.5 mb-1.5">
+                                <span className="text-[10px] truncate" style={{ color: "var(--text-2)" }}>{p.description}</span>
+                                <span className="text-[10px] font-semibold ml-2 shrink-0" style={{ color: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}>
                                   {p.percentage}%
                                 </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-0.5 rounded-full overflow-hidden" style={{ background: "var(--surface-3)" }}>
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(rate / maxRate) * 100}%` }}
+                                    transition={{ duration: 0.6, delay: i * 0.08 }}
+                                    className="h-full rounded-full"
+                                    style={{ background: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}
+                                  />
+                                </div>
+                                <span className="text-[9px] shrink-0" style={{ color: "var(--text-3)" }}>{rate}%/yr</span>
                               </div>
                             </div>
                           </div>
                         );
-                      })}
+                      });
+                    })()}
+                  </div>
+
+                  {/* ✓ I Invested This */}
+                  {aiAdvice && uninvestedBalance > 0 && (
+                    <div className="mt-5 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+                      {investmentConfirmed ? (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold"
+                          style={{ background: "var(--green-dim)", border: "1px solid var(--green)", color: "var(--green)" }}
+                        >
+                          ✓ Investment logged — portfolio updated
+                        </motion.div>
+                      ) : (
+                        <motion.button
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            const invAllocations: InvestmentAllocation[] = aiAdvice.allocations.map((a) => ({
+                              ticker: a.ticker,
+                              pct: a.percentage,
+                              annualReturn: a.annualReturn ?? RETURN_RATES[a.ticker] ?? 5,
+                            }));
+                            const blended = invAllocations.reduce((s, a) => s + (a.pct / 100) * a.annualReturn, 0);
+                            logInvestment(uninvestedBalance, invAllocations, blended);
+                            const newPV = getPortfolioValue();
+                            setPortfolioGain(getPortfolioGain());
+                            setLivePortfolioValue(newPV);
+                            setUninvestedBalance(0);
+                            setInvestmentConfirmed(true);
+                          }}
+                          className="w-full py-3 rounded-xl text-sm font-bold transition-all"
+                          style={{ background: "var(--green-dim)", border: "1px solid var(--green)", color: "var(--green)" }}
+                        >
+                          ✓ I Invested This — ${uninvestedBalance.toFixed(2)}
+                        </motion.button>
+                      )}
                     </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="empty"
-                    className="h-64 rounded-2xl border border-dashed border-white/10 flex items-center justify-center"
-                  >
-                    <p className="text-white/30 text-sm">
-                      {isGenerating ? "Analyzing..." : "Generate a portfolio split ↑"}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  className="flex items-center justify-center"
+                  style={{ ...cardStyle, height: 200 }}
+                >
+                  <p className="text-sm" style={{ color: "var(--text-2)" }}>
+                    {isGenerating ? "Analyzing..." : "Generate a portfolio ↑"}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-              {/* AI Insight / Summary */}
-              <AnimatePresence mode="wait">
-                {showPortfolio && (
-                  <motion.div
-                    key="insight"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20"
-                  >
-                    <p className="text-xs text-blue-400 font-medium mb-2">
-                      🤖 AI Insight
+            {/* AI insight */}
+            <AnimatePresence mode="wait">
+              {showPortfolio && (
+                <motion.div
+                  key="insight"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-5"
+                  style={cardStyle}
+                >
+                  <p className={`${labelStyle} mb-3`} style={{ color: "var(--green)" }}>AI Insight</p>
+                  {aiAdvice?.summary && (
+                    <p className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-2)" }}>
+                      {aiAdvice.summary}
                     </p>
-                    {aiAdvice?.summary ? (
-                      <p className="text-sm text-white/60 leading-relaxed mb-3">
-                        {aiAdvice.summary}
-                      </p>
-                    ) : null}
-                    <p className="text-sm text-white/60 leading-relaxed">
-                      {displayInsights[0]}
+                  )}
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-2)" }}>
+                    {displayInsights[0]}
+                  </p>
+                  {aiAdvice?.threshold && thisMonth < aiAdvice.threshold && (
+                    <p className="text-xs mt-3 pt-3" style={{ color: "var(--text-3)", borderTop: "1px solid var(--border)" }}>
+                      💡 Reach ${aiAdvice.threshold} to unlock the full recommended allocation.
                     </p>
-                    {aiAdvice?.threshold && thisMonth < aiAdvice.threshold && (
-                      <p className="text-xs text-white/40 mt-3 pt-3 border-t border-blue-500/20">
-                        💡 Tip: Reach ${aiAdvice.threshold} to unlock the full recommended allocation.
-                      </p>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-              {/* Per-card breakdown */}
-              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/8">
-                <h3 className="text-sm font-semibold text-white/60 uppercase tracking-widest mb-4">
-                  Earnings by Card
-                </h3>
-                <div className="space-y-3">
-                  {apiCards.map((card) => {
-                    const uc = USER_CARDS[card.id];
-                    return (
-                      <div key={card.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: COLOR_MAP[uc?.color ?? ''] ?? '#fff' }} />
-                          <span className="text-xs text-white/60 truncate">{card.cardName}</span>
-                        </div>
-                        <span className="text-xs font-semibold text-white">${(uc?.totalEarned ?? 0).toLocaleString()}</span>
+            {/* Earnings by card */}
+            <div className="p-5" style={cardStyle}>
+              <p className={`${labelStyle} mb-4`} style={{ color: "var(--text-2)" }}>Earnings by Card</p>
+              <div className="space-y-3">
+                {(() => {
+                  const history = getStore().history;
+                  const byCard: Record<string, { name: string; total: number }> = {};
+                  for (const e of history) {
+                    if (!byCard[e.cardId]) byCard[e.cardId] = { name: e.cardName, total: 0 };
+                    byCard[e.cardId].total = Math.round((byCard[e.cardId].total + e.amount) * 100) / 100;
+                  }
+                  const entries = Object.entries(byCard);
+                  if (entries.length === 0) {
+                    return <p className="text-xs" style={{ color: "var(--text-3)" }}>No logged rewards yet — use SmartSwipe and tap &quot;Log to RewardVest&quot;.</p>;
+                  }
+                  return entries.sort((a, b) => b[1].total - a[1].total).map(([id, { name, total }], i) => (
+                    <div key={id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }} />
+                        <span className="text-xs truncate" style={{ color: "var(--text-2)" }}>{name}</span>
                       </div>
-                    );
-                  })}
-                </div>
+                      <span className="text-xs font-bold text-white">${total.toFixed(2)}</span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Bloomberg Microstructure Analysis ─────────────────── */}
+        {/* ── Bloomberg Microstructure ─────────────── */}
         {nqBars.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mt-12"
+            transition={{ delay: 0.3 }}
+            className="mt-6"
           >
-            {/* Header + date picker */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-400/10 border border-orange-400/20 text-orange-400 text-xs font-mono font-medium mb-2">
-                  ⚡ BLOOMBERG MICROSTRUCTURE
-                </div>
-                <h2 className="text-2xl font-bold text-white">NQ Futures — Order Flow Analysis</h2>
-                <p className="text-xs text-white/40 mt-1">1-min bars · {nqBars.length} bars · RTH session</p>
+                <p className={`${labelStyle} mb-1`} style={{ color: "#f97316" }}>⚡ Bloomberg Microstructure</p>
+                <h2 className="text-lg font-bold text-white">NQ Futures — Order Flow</h2>
+                <p className="text-xs mt-0.5" style={{ color: "var(--text-2)" }}>1-min bars · {nqBars.length} bars · RTH session</p>
               </div>
               <select
                 value={nqDate}
                 onChange={(e) => handleDateChange(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-orange-400/50"
+                className="text-xs rounded-lg px-3 py-2 focus:outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "white" }}
               >
-                {nqDates.slice().reverse().map(d => (
-                  <option key={d} value={d} className="bg-[#0f0f0f]">{d}</option>
+                {nqDates.slice().reverse().map((d) => (
+                  <option key={d} value={d} style={{ background: "var(--surface)" }}>{d}</option>
                 ))}
               </select>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-
-              {/* 1. Price + VWAP + Bands */}
-              <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/8">
+            <div className="space-y-4">
+              {/* 1. Price + VWAP */}
+              <div className="p-5" style={cardStyle}>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="font-semibold text-white text-sm">Price vs VWAP</h3>
-                    <p className="text-[10px] text-white/40">Close · VWAP · ±1σ / ±2σ bands</p>
+                    <p className={labelStyle} style={{ color: "var(--text-2)" }}>Price vs VWAP</p>
+                    <p className="text-sm font-semibold text-white mt-0.5">Close · VWAP · ±1σ / ±2σ bands</p>
                   </div>
-                  <div className="flex items-center gap-4 text-[10px]">
-                    <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-white inline-block" />Price</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-400 inline-block" />VWAP</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-2 bg-blue-400/20 inline-block rounded" />±1σ</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-2 bg-blue-400/10 inline-block rounded" />±2σ</span>
+                  <div className="flex items-center gap-4 text-[10px]" style={{ color: "var(--text-2)" }}>
+                    <span className="flex items-center gap-1"><span className="w-3 h-px bg-white inline-block" /> Price</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-px bg-blue-400 inline-block" /> VWAP</span>
                   </div>
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <ComposedChart data={nqBars} margin={{ top: 5, right: 5, bottom: 5, left: 50 }}>
-                    <XAxis dataKey="t" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                    <YAxis tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
-                    <Tooltip contentStyle={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} labelStyle={{ color: "#fff" }} />
-                    <Area dataKey="vwap_upper2" fill="rgba(96,165,250,0.07)" stroke="none" />
-                    <Area dataKey="vwap_lower2" fill="rgba(96,165,250,0.07)" stroke="none" />
-                    <Area dataKey="vwap_upper1" fill="rgba(96,165,250,0.15)" stroke="none" />
-                    <Area dataKey="vwap_lower1" fill="rgba(96,165,250,0.15)" stroke="none" />
-                    <Line type="monotone" dataKey="vwap" stroke="#60a5fa" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-                    <Line type="monotone" dataKey="close" stroke="#fff" strokeWidth={1.5} dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <div className="chart-stage chart-stage-blue">
+                  <div className="chart-tilt" style={{ height: 220 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={nqBars} margin={{ top: 16, right: 16, bottom: 8, left: 36 }}>
+                        <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 8" />
+                        <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
+                        <YAxis tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                        <Tooltip contentStyle={{ background: "rgba(7,12,18,0.92)", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 14, fontSize: 11, boxShadow: "0 18px 60px rgba(0,0,0,0.34)" }} labelStyle={{ color: "white" }} />
+                        <Area dataKey="vwap_upper2" fill="rgba(96,165,250,0.08)" stroke="none" />
+                        <Area dataKey="vwap_lower2" fill="rgba(96,165,250,0.05)" stroke="none" />
+                        <Area dataKey="vwap_upper1" fill="rgba(96,165,250,0.14)" stroke="none" />
+                        <Area dataKey="vwap_lower1" fill="rgba(96,165,250,0.12)" stroke="none" />
+                        <Line type="monotone" dataKey="vwap" stroke="#60a5fa" strokeWidth={1.8} dot={false} strokeDasharray="4 2" />
+                        <Line type="monotone" dataKey="close" stroke="#ffffff" strokeWidth={1.8} dot={false} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-6">
-                {/* 2. Cumulative Delta */}
-                <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/8">
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-white text-sm">Cumulative Delta</h3>
-                    <p className="text-[10px] text-white/40">Buy pressure minus sell pressure · session total</p>
+              <div className="grid lg:grid-cols-2 gap-4">
+                {/* 2. Volume Z-Score */}
+                <div className="p-5" style={cardStyle}>
+                  <p className={`${labelStyle} mb-1`} style={{ color: "var(--text-2)" }}>Volume Z-Score</p>
+                  <p className="text-sm font-semibold text-white mb-4">Institutional activity spikes</p>
+                  <div className="chart-stage chart-stage-cyan">
+                    <div className="chart-tilt" style={{ height: 180 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={nqBars} margin={{ top: 14, right: 12, bottom: 8, left: 28 }}>
+                          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
+                          <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
+                          <YAxis tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} />
+                          <Tooltip contentStyle={{ background: "rgba(6,14,17,0.92)", border: "1px solid rgba(34,211,238,0.28)", borderRadius: 14, fontSize: 11 }} />
+                          <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" />
+                          <ReferenceLine y={2} stroke="#fbbf2466" strokeDasharray="3 3" label={{ value: "2sigma", fill: "#fbbf2499", fontSize: 9 }} />
+                          <Bar dataKey="vol_zscore" fill="#22d3ee" opacity={0.85} radius={[6, 6, 0, 0]} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <ComposedChart data={nqBars} margin={{ top: 5, right: 5, bottom: 5, left: 40 }}>
-                      <XAxis dataKey="t" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
-                      <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-                      <Area
-                        type="monotone"
-                        dataKey="session_cum_delta"
-                        stroke="none"
-                        fill="url(#deltaGrad)"
-                      />
-                      <Line type="monotone" dataKey="session_cum_delta" stroke="#4ade80" strokeWidth={1.5} dot={false} />
-                      <defs>
-                        <linearGradient id="deltaGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#4ade80" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#4ade80" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                    </ComposedChart>
-                  </ResponsiveContainer>
                 </div>
 
-                {/* 3. Buy vs Sell Volume */}
-                <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/8">
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-white text-sm">Buy vs Sell Volume</h3>
-                    <p className="text-[10px] text-white/40">Green = aggressor buys · Red = aggressor sells</p>
+                {/* 3. Price vs EMA 9/20 */}
+                <div className="p-5" style={cardStyle}>
+                  <p className={`${labelStyle} mb-1`} style={{ color: "var(--text-2)" }}>Price vs EMA 9 / 20</p>
+                  <p className="text-sm font-semibold text-white mb-4">Trend crossover signals</p>
+                  <div className="chart-stage chart-stage-gold">
+                    <div className="chart-tilt" style={{ height: 180 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={nqBars} margin={{ top: 14, right: 12, bottom: 8, left: 36 }}>
+                          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
+                          <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
+                          <YAxis tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                          <Tooltip contentStyle={{ background: "rgba(18,12,4,0.92)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 14, fontSize: 11 }} labelStyle={{ color: "white" }} />
+                          <Line type="monotone" dataKey="ema_20" stroke="#60a5fa" strokeWidth={1.6} dot={false} strokeDasharray="4 2" />
+                          <Line type="monotone" dataKey="ema_9" stroke="#fbbf24" strokeWidth={1.8} dot={false} />
+                          <Line type="monotone" dataKey="close" stroke="#ffffff" strokeWidth={1.8} dot={false} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <ComposedChart data={nqBars} margin={{ top: 5, right: 5, bottom: 5, left: 40 }}>
-                      <XAxis dataKey="t" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
-                      <Bar dataKey="buy_vol" fill="#4ade80" opacity={0.7} />
-                      <Bar dataKey="sell_vol" fill="#f87171" opacity={0.7} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                  <div className="flex items-center gap-4 mt-2 text-[10px]" style={{ color: "var(--text-2)" }}>
+                    <span className="flex items-center gap-1"><span className="w-3 h-px bg-white inline-block" /> Close</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-px bg-yellow-400 inline-block" /> EMA 9</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-px bg-blue-400 inline-block" /> EMA 20</span>
+                  </div>
                 </div>
 
                 {/* 4. RSI */}
-                <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/8">
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-white text-sm">RSI (14)</h3>
-                    <p className="text-[10px] text-white/40">Overbought &gt;70 · Oversold &lt;30</p>
+                <div className="p-5" style={cardStyle}>
+                  <p className={`${labelStyle} mb-1`} style={{ color: "var(--text-2)" }}>RSI (14)</p>
+                  <p className="text-sm font-semibold text-white mb-4">Overbought &gt;70 · Oversold &lt;30</p>
+                  <div className="chart-stage chart-stage-violet">
+                    <div className="chart-tilt" style={{ height: 180 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={nqBars} margin={{ top: 14, right: 12, bottom: 8, left: 28 }}>
+                          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
+                          <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
+                          <YAxis domain={[0, 100]} tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} />
+                          <Tooltip contentStyle={{ background: "rgba(15,9,24,0.92)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 14, fontSize: 11 }} />
+                          <ReferenceLine y={70} stroke="#f8717188" strokeDasharray="3 3" label={{ value: "70", fill: "#f8717199", fontSize: 9 }} />
+                          <ReferenceLine y={30} stroke="#00c80588" strokeDasharray="3 3" label={{ value: "30", fill: "#00c80599", fontSize: 9 }} />
+                          <ReferenceLine y={50} stroke="rgba(255,255,255,0.12)" />
+                          <Area type="monotone" dataKey="rsi_14" stroke="#a78bfa" strokeWidth={1.8} fill="rgba(167,139,250,0.16)" dot={false} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <ComposedChart data={nqBars} margin={{ top: 5, right: 5, bottom: 5, left: 40 }}>
-                      <XAxis dataKey="t" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                      <YAxis domain={[0, 100]} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
-                      <ReferenceLine y={70} stroke="rgba(248,113,113,0.5)" strokeDasharray="3 3" label={{ value: "70", fill: "rgba(248,113,113,0.7)", fontSize: 9 }} />
-                      <ReferenceLine y={30} stroke="rgba(74,222,128,0.5)" strokeDasharray="3 3" label={{ value: "30", fill: "rgba(74,222,128,0.7)", fontSize: 9 }} />
-                      <ReferenceLine y={50} stroke="rgba(255,255,255,0.1)" />
-                      <Area type="monotone" dataKey="rsi_14" stroke="#a78bfa" strokeWidth={1.5} fill="rgba(167,139,250,0.1)" dot={false} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
                 </div>
 
-                {/* 5. Absorption Signal */}
-                <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/8">
-                  <div className="mb-4">
-                    <h3 className="font-semibold text-white text-sm">Absorption Signal</h3>
-                    <p className="text-[10px] text-white/40">+1 = bullish absorption · −1 = bearish absorption</p>
+                {/* 5. Absorption */}
+                <div className="p-5" style={cardStyle}>
+                  <p className={`${labelStyle} mb-1`} style={{ color: "var(--text-2)" }}>Absorption Signal</p>
+                  <p className="text-sm font-semibold text-white mb-4">+1 bullish · −1 bearish absorption</p>
+                  <div className="chart-stage chart-stage-orange">
+                    <div className="chart-tilt" style={{ height: 180 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={nqBars} margin={{ top: 14, right: 12, bottom: 8, left: 28 }}>
+                          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
+                          <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
+                          <YAxis tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} />
+                          <Tooltip contentStyle={{ background: "rgba(24,12,5,0.92)", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 14, fontSize: 11 }} />
+                          <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" />
+                          <ReferenceLine y={0.3} stroke="#00c80533" strokeDasharray="3 3" />
+                          <ReferenceLine y={-0.3} stroke="#ff3b3033" strokeDasharray="3 3" />
+                          <Bar dataKey="absorption" fill="#fbbf24" opacity={0.8} radius={[6, 6, 0, 0]} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <ComposedChart data={nqBars} margin={{ top: 5, right: 5, bottom: 5, left: 40 }}>
-                      <XAxis dataKey="t" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <Tooltip contentStyle={{ background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 11 }} />
-                      <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-                      <ReferenceLine y={0.3} stroke="rgba(74,222,128,0.3)" strokeDasharray="3 3" />
-                      <ReferenceLine y={-0.3} stroke="rgba(248,113,113,0.3)" strokeDasharray="3 3" />
-                      <Bar dataKey="absorption" fill="#fbbf24" opacity={0.6} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
                 </div>
               </div>
-
             </div>
           </motion.div>
         )}
+
+        {/* ── 10-Year Projection ───────────────────── */}
+        <AnimatePresence>
+          {showPortfolio && thisMonth > 0 && (
+            <motion.div
+              key="projection"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mt-4 p-5"
+              style={cardStyle}
+            >
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <p className={`${labelStyle} mb-1`} style={{ color: "var(--text-2)" }}>10-Year Growth Projection</p>
+                  <p className="text-sm font-semibold text-white">
+                    ${thisMonth.toFixed(0)}/mo DCA · {projectedReturn}% annual return
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold" style={{ color: "#a78bfa" }}>${tenYearGrowth.toLocaleString()}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-2)" }}>at year 10</p>
+                </div>
+              </div>
+              <div className="chart-stage chart-stage-violet">
+                <motion.div
+                  className="chart-sheen"
+                  animate={{ x: ["-25%", "110%"] }}
+                  transition={{ duration: 6.5, repeat: Infinity, ease: "linear" }}
+                />
+                <div className="chart-tilt" style={{ height: 240 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={projectionData}
+                      margin={{ top: 18, right: 16, bottom: 10, left: 30 }}
+                    >
+                      <defs>
+                        <linearGradient id="portfolioHalo" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(192,132,252,0.34)" />
+                          <stop offset="100%" stopColor="rgba(192,132,252,0)" />
+                        </linearGradient>
+                        <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#c084fc" stopOpacity={0.9} />
+                          <stop offset="55%" stopColor="#a78bfa" stopOpacity={0.32} />
+                          <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.02} />
+                        </linearGradient>
+                        <linearGradient id="investedGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 8" />
+                      <XAxis dataKey="label" tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} interval={11} />
+                      <YAxis tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={formatMoneyTick} />
+                      <Tooltip
+                        contentStyle={{ background: "rgba(15,9,24,0.92)", border: "1px solid rgba(167,139,250,0.32)", borderRadius: 14, fontSize: 11, boxShadow: "0 18px 60px rgba(0,0,0,0.34)" }}
+                        labelFormatter={(label, payload) => {
+                          const monthIndex = payload?.[0]?.payload?.monthIndex ?? 0;
+                          return `Month ${monthIndex}`;
+                        }}
+                        formatter={(v, name) => [`$${Number(v).toLocaleString()}`, name === "portfolio" ? "Portfolio Value" : "Total Invested"]}
+                      />
+                      <Area type="monotone" dataKey="halo" stroke="transparent" fill="url(#portfolioHalo)" isAnimationActive />
+                      <Area type="monotone" dataKey="invested" stroke="#60a5fa" strokeWidth={1.3} strokeDasharray="4 2" fill="url(#investedGrad)" dot={false} isAnimationActive />
+                      <Area type="monotone" dataKey="portfolio" stroke="#c084fc" strokeWidth={2.4} fill="url(#portfolioGrad)" dot={false} activeDot={{ r: 5, fill: "#ffffff", stroke: "#c084fc", strokeWidth: 2 }} isAnimationActive />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="flex items-center gap-5 mt-2 text-[10px]" style={{ color: "var(--text-2)" }}>
+                <span className="flex items-center gap-1.5"><span className="w-4 h-px bg-purple-400 inline-block" /> Portfolio value</span>
+                <span className="flex items-center gap-1.5"><span className="w-4 h-px bg-blue-400 inline-block" /> Total invested</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       </div>
     </div>
