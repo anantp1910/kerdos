@@ -1216,29 +1216,124 @@ export default function RewardVestPage() {
                   </div>
                 </div>
 
-                {/* 3. Price vs EMA 9/20 */}
+                {/* 3. Price vs EMA 9/20 — ECharts with crossover signal markers */}
                 <div className="p-5" style={cardStyle}>
                   <p className={`${labelStyle} mb-1`} style={{ color: "var(--text-2)" }}>Price vs EMA 9 / 20</p>
-                  <p className="text-sm font-semibold text-white mb-4">Trend crossover signals</p>
+                  <p className="text-sm font-semibold text-white mb-4">
+                    Trend crossover signals
+                    {emaCrossovers.length > 0 && (
+                      <span className="ml-2 text-[10px] font-normal" style={{ color: "var(--text-3)" }}>
+                        · {emaCrossovers.length} crossover{emaCrossovers.length !== 1 ? "s" : ""} detected
+                      </span>
+                    )}
+                  </p>
                   <div className="chart-stage chart-stage-gold">
                     <div className="chart-tilt" style={{ height: 180 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={nqBars} margin={{ top: 14, right: 12, bottom: 8, left: 36 }}>
-                          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
-                          <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                          <YAxis tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
-                          <Tooltip contentStyle={{ background: "rgba(18,12,4,0.92)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 14, fontSize: 11 }} labelStyle={{ color: "white" }} />
-                          <Line type="monotone" dataKey="ema_20" stroke="#60a5fa" strokeWidth={1.6} dot={false} strokeDasharray="4 2" />
-                          <Line type="monotone" dataKey="ema_9" stroke="#fbbf24" strokeWidth={1.8} dot={false} />
-                          <Line type="monotone" dataKey="close" stroke="#ffffff" strokeWidth={1.8} dot={false} />
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                      <ReactECharts
+                        option={{
+                          backgroundColor: "transparent",
+                          grid: { left: "3%", right: "4%", bottom: "8%", top: "14%", containLabel: true },
+                          xAxis: {
+                            type: "category",
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            data: nqBars.map((d: any) => d.t),
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            axisLabel: { color: "var(--text-2)", fontSize: 9, interval: 29 },
+                          },
+                          yAxis: {
+                            type: "value",
+                            scale: true,
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            axisLabel: { color: "var(--text-2)", fontSize: 9 },
+                            splitLine: { lineStyle: { color: "rgba(255,255,255,0.05)", type: "dashed" } },
+                          },
+                          tooltip: {
+                            trigger: "axis",
+                            backgroundColor: "rgba(18,12,4,0.95)",
+                            borderColor: "rgba(251,191,36,0.3)",
+                            borderRadius: 14,
+                            textStyle: { color: "white", fontSize: 11 },
+                          },
+                          series: [
+                            {
+                              name: "EMA 20",
+                              type: "line",
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              data: nqBars.map((d: any) => d.ema_20),
+                              smooth: true,
+                              symbol: "none",
+                              lineStyle: { color: "#60a5fa", width: 1.6, type: "dashed" },
+                              animationDuration: 2000,
+                              animationEasing: "cubicOut",
+                            },
+                            {
+                              name: "EMA 9",
+                              type: "line",
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              data: nqBars.map((d: any) => d.ema_9),
+                              smooth: true,
+                              symbol: "none",
+                              lineStyle: {
+                                color: "#fbbf24",
+                                width: 1.8,
+                                shadowColor: "rgba(251,191,36,0.4)",
+                                shadowBlur: 6,
+                              },
+                              animationDuration: 2200,
+                              animationEasing: "cubicOut",
+                            },
+                            {
+                              name: "Price",
+                              type: "line",
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              data: nqBars.map((d: any) => d.close),
+                              smooth: true,
+                              symbol: "none",
+                              lineStyle: {
+                                color: "#ffffff",
+                                width: 2,
+                                shadowColor: "rgba(255,255,255,0.5)",
+                                shadowBlur: 10,
+                              },
+                              animationDuration: 2400,
+                              animationEasing: "cubicOut",
+                              markPoint: {
+                                symbolSize: 28,
+                                data: emaCrossovers.map(c => ({
+                                  coord: [c.idx, c.price],
+                                  symbol: c.type === "bullish" ? "arrow" : "arrow",
+                                  symbolRotate: c.type === "bullish" ? 0 : 180,
+                                  itemStyle: {
+                                    color: c.type === "bullish" ? "#00c805" : "#f87171",
+                                    shadowColor: c.type === "bullish" ? "#00c805" : "#f87171",
+                                    shadowBlur: 20,
+                                    opacity: 0.92,
+                                  },
+                                  label: {
+                                    show: true,
+                                    formatter: c.type === "bullish" ? "B" : "S",
+                                    color: c.type === "bullish" ? "#00c805" : "#f87171",
+                                    fontSize: 8,
+                                    fontWeight: "bold",
+                                    offset: [0, c.type === "bullish" ? -20 : 20],
+                                  },
+                                })),
+                              },
+                            },
+                          ],
+                        }}
+                        style={{ height: "100%", width: "100%" }}
+                      />
                     </div>
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-[10px]" style={{ color: "var(--text-2)" }}>
                     <span className="flex items-center gap-1"><span className="w-3 h-px bg-white inline-block" /> Close</span>
                     <span className="flex items-center gap-1"><span className="w-3 h-px bg-yellow-400 inline-block" /> EMA 9</span>
                     <span className="flex items-center gap-1"><span className="w-3 h-px bg-blue-400 inline-block" /> EMA 20</span>
+                    {emaCrossovers.some(c => c.type === "bullish") && <span className="flex items-center gap-1"><span className="text-green-400">▲</span> Buy signal</span>}
+                    {emaCrossovers.some(c => c.type === "bearish") && <span className="flex items-center gap-1"><span className="text-red-400">▼</span> Sell signal</span>}
                   </div>
                 </div>
 
