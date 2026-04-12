@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactECharts from 'echarts-for-react';
 import {
   PieChart,
   Pie,
@@ -401,49 +402,97 @@ export default function RewardVestPage() {
                   transition={{ duration: 5.5, repeat: Infinity, ease: "linear" }}
                 />
                 <div className="chart-tilt" style={{ height: 220 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={rewardTrendData} margin={{ top: 18, right: 16, bottom: 10, left: 8 }}>
-                      <defs>
-                        <linearGradient id="rewardShadow" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgba(0,0,0,0.34)" />
-                          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
-                        </linearGradient>
-                        <linearGradient id="rewardCap" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgba(34,197,94,0.42)" />
-                          <stop offset="100%" stopColor="rgba(34,197,94,0)" />
-                        </linearGradient>
-                        <linearGradient id="rewardGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#34d399" stopOpacity={0.95} />
-                          <stop offset="55%" stopColor="#00c805" stopOpacity={0.22} />
-                          <stop offset="100%" stopColor="#00c805" stopOpacity={0.02} />
-                        </linearGradient>
-                        <filter id="rewardGlow" x="-40%" y="-40%" width="180%" height="180%">
-                          <feDropShadow dx="0" dy="18" stdDeviation="18" floodColor="#00c805" floodOpacity="0.18" />
-                        </filter>
-                      </defs>
-                      <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.07)" strokeDasharray="4 8" />
-                      <XAxis dataKey="month" tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "var(--text-2)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={formatMoneyTick} />
-                      <Tooltip
-                        cursor={{ stroke: "rgba(52,211,153,0.5)", strokeWidth: 1, strokeDasharray: "4 4" }}
-                        contentStyle={{ background: "rgba(7,12,10,0.92)", border: "1px solid rgba(52,211,153,0.28)", borderRadius: 14, fontSize: 12, color: "white", boxShadow: "0 18px 60px rgba(0,0,0,0.34)" }}
-                        formatter={(v) => [`$${Number(v).toFixed(2)}`, "Rewards"]}
-                      />
-                      <Area type="monotone" dataKey="shadow" stroke="transparent" fill="url(#rewardShadow)" fillOpacity={1} isAnimationActive />
-                      <Area type="monotone" dataKey="cap" stroke="transparent" fill="url(#rewardCap)" fillOpacity={1} isAnimationActive />
-                      <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#5efc8d"
-                        strokeWidth={3}
-                        fill="url(#rewardGrad)"
-                        dot={false}
-                        activeDot={{ r: 6, fill: "#ffffff", stroke: "#00c805", strokeWidth: 3 }}
-                        filter="url(#rewardGlow)"
-                        isAnimationActive
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <ReactECharts
+                    option={{
+                      backgroundColor: 'transparent',
+                      grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '10%',
+                        top: '10%',
+                        containLabel: true
+                      },
+                      xAxis: {
+                        type: 'category',
+                        data: rewardTrendData.map(d => d.month),
+                        axisLine: { show: false },
+                        axisTick: { show: false },
+                        axisLabel: {
+                          color: 'var(--text-2)',
+                          fontSize: 10
+                        }
+                      },
+                      yAxis: {
+                        type: 'value',
+                        axisLine: { show: false },
+                        axisTick: { show: false },
+                        axisLabel: {
+                          color: 'var(--text-2)',
+                          fontSize: 10,
+                          formatter: formatMoneyTick
+                        },
+                        splitLine: {
+                          lineStyle: {
+                            color: 'rgba(255,255,255,0.07)',
+                            type: 'dashed'
+                          }
+                        }
+                      },
+                      tooltip: {
+                        backgroundColor: 'rgba(7,12,10,0.92)',
+                        borderColor: 'rgba(52,211,153,0.28)',
+                        borderRadius: 14,
+                        textStyle: {
+                          color: 'white',
+                          fontSize: 12
+                        },
+                        boxShadow: '0 18px 60px rgba(0,0,0,0.34)',
+                        formatter: (params: any) => {
+                          return `Rewards: $${Number(params.value).toFixed(2)}`;
+                        }
+                      },
+                      series: [
+                        {
+                          name: 'Rewards',
+                          type: 'line',
+                          data: rewardTrendData.map(d => d.value),
+                          smooth: true,
+                          symbol: 'none',
+                          lineStyle: {
+                            color: '#5efc8d',
+                            width: 3,
+                            shadowColor: '#00c805',
+                            shadowBlur: 10,
+                            shadowOffsetY: 2
+                          },
+                          areaStyle: {
+                            color: {
+                              type: 'linear',
+                              x: 0,
+                              y: 0,
+                              x2: 0,
+                              y2: 1,
+                              colorStops: [
+                                { offset: 0, color: 'rgba(52,211,153,0.4)' },
+                                { offset: 0.5, color: 'rgba(0,200,5,0.15)' },
+                                { offset: 1, color: 'rgba(0,200,5,0.02)' }
+                              ]
+                            }
+                          },
+                          emphasis: {
+                            focus: 'series',
+                            lineStyle: {
+                              shadowColor: '#00c805',
+                              shadowBlur: 20
+                            }
+                          },
+                          animationDuration: 2000,
+                          animationEasing: 'cubicOut'
+                        }
+                      ]
+                    }}
+                    style={{ height: '100%', width: '100%' }}
+                  />
                 </div>
               </div>
             </motion.div>
@@ -874,20 +923,161 @@ export default function RewardVestPage() {
                 </div>
                 <div className="chart-stage chart-stage-blue">
                   <div className="chart-tilt" style={{ height: 220 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={nqBars} margin={{ top: 16, right: 16, bottom: 8, left: 36 }}>
-                        <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 8" />
-                        <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                        <YAxis tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
-                        <Tooltip contentStyle={{ background: "rgba(7,12,18,0.92)", border: "1px solid rgba(96,165,250,0.3)", borderRadius: 14, fontSize: 11, boxShadow: "0 18px 60px rgba(0,0,0,0.34)" }} labelStyle={{ color: "white" }} />
-                        <Area dataKey="vwap_upper2" fill="rgba(96,165,250,0.08)" stroke="none" />
-                        <Area dataKey="vwap_lower2" fill="rgba(96,165,250,0.05)" stroke="none" />
-                        <Area dataKey="vwap_upper1" fill="rgba(96,165,250,0.14)" stroke="none" />
-                        <Area dataKey="vwap_lower1" fill="rgba(96,165,250,0.12)" stroke="none" />
-                        <Line type="monotone" dataKey="vwap" stroke="#60a5fa" strokeWidth={1.8} dot={false} strokeDasharray="4 2" />
-                        <Line type="monotone" dataKey="close" stroke="#ffffff" strokeWidth={1.8} dot={false} />
-                      </ComposedChart>
-                    </ResponsiveContainer>
+                    <ReactECharts
+                      option={{
+                        backgroundColor: 'transparent',
+                        grid: {
+                          left: '3%',
+                          right: '4%',
+                          bottom: '8%',
+                          top: '10%',
+                          containLabel: true
+                        },
+                        xAxis: {
+                          type: 'category',
+                          data: nqBars.map(d => d.t),
+                          axisLine: { show: false },
+                          axisTick: { show: false },
+                          axisLabel: {
+                            color: 'var(--text-2)',
+                            fontSize: 9,
+                            interval: 29
+                          }
+                        },
+                        yAxis: {
+                          type: 'value',
+                          axisLine: { show: false },
+                          axisTick: { show: false },
+                          axisLabel: {
+                            color: 'var(--text-2)',
+                            fontSize: 9
+                          },
+                          splitLine: {
+                            lineStyle: {
+                              color: 'rgba(255,255,255,0.06)',
+                              type: 'dashed'
+                            }
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(7,12,18,0.92)',
+                          borderColor: 'rgba(96,165,250,0.3)',
+                          borderRadius: 14,
+                          textStyle: {
+                            color: 'white',
+                            fontSize: 11
+                          },
+                          boxShadow: '0 18px 60px rgba(0,0,0,0.34)'
+                        },
+                        series: [
+                          {
+                            name: 'VWAP Upper 2σ',
+                            type: 'line',
+                            data: nqBars.map(d => d.vwap_upper2),
+                            smooth: true,
+                            symbol: 'none',
+                            lineStyle: {
+                              opacity: 0.3,
+                              color: 'rgba(96,165,250,0.2)',
+                              width: 0
+                            },
+                            areaStyle: {
+                              color: 'rgba(96,165,250,0.08)'
+                            },
+                            animationDuration: 1500,
+                            animationDelay: 0
+                          },
+                          {
+                            name: 'VWAP Lower 2σ',
+                            type: 'line',
+                            data: nqBars.map(d => d.vwap_lower2),
+                            smooth: true,
+                            symbol: 'none',
+                            lineStyle: {
+                              opacity: 0.3,
+                              color: 'rgba(96,165,250,0.2)',
+                              width: 0
+                            },
+                            areaStyle: {
+                              color: 'rgba(96,165,250,0.05)'
+                            },
+                            animationDuration: 1500,
+                            animationDelay: 100
+                          },
+                          {
+                            name: 'VWAP Upper 1σ',
+                            type: 'line',
+                            data: nqBars.map(d => d.vwap_upper1),
+                            smooth: true,
+                            symbol: 'none',
+                            lineStyle: {
+                              opacity: 0.5,
+                              color: 'rgba(96,165,250,0.3)',
+                              width: 0
+                            },
+                            areaStyle: {
+                              color: 'rgba(96,165,250,0.14)'
+                            },
+                            animationDuration: 1500,
+                            animationDelay: 200
+                          },
+                          {
+                            name: 'VWAP Lower 1σ',
+                            type: 'line',
+                            data: nqBars.map(d => d.vwap_lower1),
+                            smooth: true,
+                            symbol: 'none',
+                            lineStyle: {
+                              opacity: 0.5,
+                              color: 'rgba(96,165,250,0.3)',
+                              width: 0
+                            },
+                            areaStyle: {
+                              color: 'rgba(96,165,250,0.12)'
+                            },
+                            animationDuration: 1500,
+                            animationDelay: 300
+                          },
+                          {
+                            name: 'VWAP',
+                            type: 'line',
+                            data: nqBars.map(d => d.vwap),
+                            smooth: true,
+                            symbol: 'none',
+                            lineStyle: {
+                              color: '#60a5fa',
+                              width: 1.8,
+                              type: 'dashed',
+                              dashOffset: 4
+                            },
+                            animationDuration: 2000,
+                            animationDelay: 400
+                          },
+                          {
+                            name: 'Price',
+                            type: 'line',
+                            data: nqBars.map(d => d.close),
+                            smooth: true,
+                            symbol: 'none',
+                            lineStyle: {
+                              color: '#ffffff',
+                              width: 1.8,
+                              shadowColor: '#ffffff',
+                              shadowBlur: 8
+                            },
+                            animationDuration: 2000,
+                            animationDelay: 500,
+                            emphasis: {
+                              lineStyle: {
+                                shadowBlur: 15
+                              }
+                            }
+                          }
+                        ],
+                        animationEasing: 'cubicOut'
+                      }}
+                      style={{ height: '100%', width: '100%' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -899,17 +1089,76 @@ export default function RewardVestPage() {
                   <p className="text-sm font-semibold text-white mb-4">Institutional activity spikes</p>
                   <div className="chart-stage chart-stage-cyan">
                     <div className="chart-tilt" style={{ height: 180 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={nqBars} margin={{ top: 14, right: 12, bottom: 8, left: 28 }}>
-                          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
-                          <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                          <YAxis tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                          <Tooltip contentStyle={{ background: "rgba(6,14,17,0.92)", border: "1px solid rgba(34,211,238,0.28)", borderRadius: 14, fontSize: 11 }} />
-                          <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" />
-                          <ReferenceLine y={2} stroke="#fbbf2466" strokeDasharray="3 3" label={{ value: "2sigma", fill: "#fbbf2499", fontSize: 9 }} />
-                          <Bar dataKey="vol_zscore" fill="#22d3ee" opacity={0.85} radius={[6, 6, 0, 0]} />
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                      <ReactECharts
+                        option={{
+                          backgroundColor: 'transparent',
+                          grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '8%',
+                            top: '10%',
+                            containLabel: true
+                          },
+                          xAxis: {
+                            type: 'category',
+                            data: nqBars.map(d => d.t),
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            axisLabel: {
+                              color: 'var(--text-2)',
+                              fontSize: 9,
+                              interval: 29
+                            }
+                          },
+                          yAxis: {
+                            type: 'value',
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            axisLabel: {
+                              color: 'var(--text-2)',
+                              fontSize: 9
+                            },
+                            splitLine: {
+                              lineStyle: {
+                                color: 'rgba(255,255,255,0.05)',
+                                type: 'dashed'
+                              }
+                            }
+                          },
+                          tooltip: {
+                            backgroundColor: 'rgba(6,14,17,0.92)',
+                            borderColor: 'rgba(34,211,238,0.28)',
+                            borderRadius: 14,
+                            textStyle: {
+                              color: 'white',
+                              fontSize: 11
+                            }
+                          },
+                          series: [
+                            {
+                              name: 'Volume Z-Score',
+                              type: 'bar',
+                              data: nqBars.map(d => d.vol_zscore),
+                              itemStyle: {
+                                color: '#22d3ee',
+                                opacity: 0.85,
+                                borderRadius: [6, 6, 0, 0]
+                              },
+                              animationDelay: (idx: number) => idx * 50,
+                              animationDuration: 1000,
+                              emphasis: {
+                                itemStyle: {
+                                  shadowColor: '#22d3ee',
+                                  shadowBlur: 10,
+                                  opacity: 1
+                                }
+                              }
+                            }
+                          ],
+                          animationEasing: 'elasticOut'
+                        }}
+                        style={{ height: '100%', width: '100%' }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -946,18 +1195,138 @@ export default function RewardVestPage() {
                   <p className="text-sm font-semibold text-white mb-4">Overbought &gt;70 · Oversold &lt;30</p>
                   <div className="chart-stage chart-stage-violet">
                     <div className="chart-tilt" style={{ height: 180 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={nqBars} margin={{ top: 14, right: 12, bottom: 8, left: 28 }}>
-                          <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
-                          <XAxis dataKey="t" tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} interval={29} />
-                          <YAxis domain={[0, 100]} tick={{ fill: "var(--text-2)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                          <Tooltip contentStyle={{ background: "rgba(15,9,24,0.92)", border: "1px solid rgba(167,139,250,0.3)", borderRadius: 14, fontSize: 11 }} />
-                          <ReferenceLine y={70} stroke="#f8717188" strokeDasharray="3 3" label={{ value: "70", fill: "#f8717199", fontSize: 9 }} />
-                          <ReferenceLine y={30} stroke="#00c80588" strokeDasharray="3 3" label={{ value: "30", fill: "#00c80599", fontSize: 9 }} />
-                          <ReferenceLine y={50} stroke="rgba(255,255,255,0.12)" />
-                          <Area type="monotone" dataKey="rsi_14" stroke="#a78bfa" strokeWidth={1.8} fill="rgba(167,139,250,0.16)" dot={false} />
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                      <ReactECharts
+                        option={{
+                          backgroundColor: 'transparent',
+                          grid: {
+                            left: '3%',
+                            right: '4%',
+                            bottom: '8%',
+                            top: '10%',
+                            containLabel: true
+                          },
+                          xAxis: {
+                            type: 'category',
+                            data: nqBars.map(d => d.t),
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            axisLabel: {
+                              color: 'var(--text-2)',
+                              fontSize: 9,
+                              interval: 29
+                            }
+                          },
+                          yAxis: {
+                            type: 'value',
+                            domain: [0, 100],
+                            axisLine: { show: false },
+                            axisTick: { show: false },
+                            axisLabel: {
+                              color: 'var(--text-2)',
+                              fontSize: 9
+                            },
+                            splitLine: {
+                              lineStyle: {
+                                color: 'rgba(255,255,255,0.05)',
+                                type: 'dashed'
+                              }
+                            }
+                          },
+                          tooltip: {
+                            backgroundColor: 'rgba(15,9,24,0.92)',
+                            borderColor: 'rgba(167,139,250,0.3)',
+                            borderRadius: 14,
+                            textStyle: {
+                              color: 'white',
+                              fontSize: 11
+                            },
+                            formatter: (params: any) => {
+                              const value = params.value;
+                              let status = 'Neutral';
+                              if (value > 70) status = 'Overbought';
+                              else if (value < 30) status = 'Oversold';
+                              return `RSI: ${value.toFixed(2)}<br/>Status: ${status}`;
+                            }
+                          },
+                          visualMap: {
+                            show: false,
+                            dimension: 1,
+                            pieces: [
+                              { min: 0, max: 30, color: 'rgba(0,200,5,0.3)' },
+                              { min: 30, max: 70, color: 'rgba(167,139,250,0.16)' },
+                              { min: 70, max: 100, color: 'rgba(248,113,113,0.3)' }
+                            ]
+                          },
+                          series: [
+                            {
+                              name: 'RSI (14)',
+                              type: 'line',
+                              data: nqBars.map(d => d.rsi_14),
+                              smooth: true,
+                              symbol: 'none',
+                              lineStyle: {
+                                color: '#a78bfa',
+                                width: 1.8,
+                                shadowColor: '#a78bfa',
+                                shadowBlur: 6
+                              },
+                              areaStyle: {
+                                color: {
+                                  type: 'linear',
+                                  x: 0,
+                                  y: 0,
+                                  x2: 0,
+                                  y2: 1,
+                                  colorStops: [
+                                    { offset: 0, color: 'rgba(167,139,250,0.4)' },
+                                    { offset: 1, color: 'rgba(167,139,250,0.05)' }
+                                  ]
+                                }
+                              },
+                              animationDuration: 2000,
+                              animationEasing: 'cubicOut',
+                              emphasis: {
+                                lineStyle: {
+                                  shadowBlur: 12
+                                }
+                              }
+                            }
+                          ],
+                          markLine: {
+                            silent: true,
+                            data: [
+                              {
+                                yAxis: 70,
+                                lineStyle: { color: '#f8717188', type: 'dashed' },
+                                label: {
+                                  show: true,
+                                  position: 'end',
+                                  formatter: '70',
+                                  color: '#f8717199',
+                                  fontSize: 9
+                                }
+                              },
+                              {
+                                yAxis: 30,
+                                lineStyle: { color: '#00c80588', type: 'dashed' },
+                                label: {
+                                  show: true,
+                                  position: 'end',
+                                  formatter: '30',
+                                  color: '#00c80599',
+                                  fontSize: 9
+                                }
+                              },
+                              {
+                                yAxis: 50,
+                                lineStyle: { color: 'rgba(255,255,255,0.12)' },
+                                label: { show: false }
+                              }
+                            ]
+                          }
+                        }}
+                        style={{ height: '100%', width: '100%' }}
+                      />
                     </div>
                   </div>
                 </div>
