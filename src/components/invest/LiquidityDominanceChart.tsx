@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import type { CSSProperties, ComponentType } from "react";
 import { useEffect, useMemo, useState } from "react";
 
-type EChartsProps = { option: unknown; style?: CSSProperties; className?: string };
+type EChartsProps = { option: unknown; style?: CSSProperties; className?: string; onChartReady?: (chart: { resize(): void }) => void };
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false }) as ComponentType<EChartsProps>;
 
 type MarketRegime = {
@@ -295,6 +295,7 @@ export default function LiquidityDominanceChart({
             ],
           }}
           style={{ width: "100%", height: "100%" }}
+          onChartReady={(chart) => { setTimeout(() => chart.resize(), 0); }}
         />
       </div>
     </div>

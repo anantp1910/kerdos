@@ -261,3 +261,95 @@ body {
     @apply font-sans;
   }
 }
+/* ── Chart containers ───────────────────────────────────────────── */
+.chart-host {
+  width: 100%;
+  min-width: 0;
+}
+
+.chart-panel {
+  width: 100%;
+  min-width: 0;
+  min-height: 220px;
+}
+
+.chart-panel-sm {
+  width: 220px;
+  height: 220px;
+  min-width: 220px;
+}
+
+.chart-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.chart-stage::before {
+  content: "";
+  position: absolute;
+  inset: auto 10% -24% 10%;
+  height: 46%;
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(0,0,0,0.48));
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.chart-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(0deg,  rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+.chart-stage-green {
+  background:
+    radial-gradient(circle at top, rgba(52,211,153,0.2), transparent 42%),
+    linear-gradient(180deg, rgba(9,23,15,0.95), rgba(4,10,7,0.98));
+}
+
+.chart-stage-blue {
+  background:
+    radial-gradient(circle at top, rgba(96,165,250,0.22), transparent 42%),
+    linear-gradient(180deg, rgba(7,17,28,0.95), rgba(5,8,16,0.98));
+}
+
+.chart-stage-violet {
+  background:
+    radial-gradient(circle at top, rgba(192,132,252,0.22), transparent 42%),
+    linear-gradient(180deg, rgba(19,10,29,0.95), rgba(8,5,13,0.98));
+}
+
+.chart-stage-gold {
+  background:
+    radial-gradient(circle at top, rgba(251,191,36,0.2), transparent 42%),
+    linear-gradient(180deg, rgba(24,17,5,0.95), rgba(10,8,4,0.98));
+}
+
+.chart-stage-orange {
+  background:
+    radial-gradient(circle at top, rgba(249,115,22,0.22), transparent 42%),
+    linear-gradient(180deg, rgba(28,13,6,0.95), rgba(12,7,4,0.98));
+}
+
+.chart-tilt {
+  position: relative;
+  z-index: 1;
+  transform: perspective(1400px) rotateX(10deg);
+  transform-origin: center top;
+}
+
+@media (max-width: 640px) {
+  .chart-stage { padding: 10px; }
+  .chart-tilt { transform: perspective(1000px) rotateX(6deg); }
+  .chart-panel-sm {
+    width: min(220px, 100%);
+    min-width: 0;
+  }
+}

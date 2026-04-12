@@ -87,7 +87,7 @@ const DEFAULT_ALLOCATIONS: Allocation[] = [
 ];
 
 const ALLOCATION_COLORS = ["#00c805", "#60a5fa", "#a78bfa", "#fbbf24", "#f87171"];
-type EChartsProps = { option: unknown; style?: CSSProperties; className?: string };
+type EChartsProps = { option: unknown; style?: CSSProperties; className?: string; onChartReady?: (chart: { resize(): void }) => void };
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false }) as ComponentType<EChartsProps>;
 
 function buildMonthlyChart(transactions: RewardTransaction[]) {
@@ -359,6 +359,7 @@ export default function RewardVestPage() {
                       }}
                       className="chart-panel-sm"
                       style={{ width: "100%", height: "100%" }}
+                      onChartReady={(chart) => { setTimeout(() => chart.resize(), 0); }}
                     />
                   </div>
                   <div className="space-y-3">
