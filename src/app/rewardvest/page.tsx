@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import React from "react";
 import dynamic from "next/dynamic";
 import type { CSSProperties, ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -143,11 +144,21 @@ export default function RewardVestPage() {
   const marketStatusLabel = getMarketStatusLabel(marketClock);
   const marketStatusColor = marketClock.isOpen ? "var(--green)" : "#fbbf24";
 
-  const cardStyle = {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "14px",
-  };
+  const glass = {
+    background: "rgba(14,14,14,0.68)",
+    border: "1px solid rgba(255,255,255,0.09)",
+    backdropFilter: "blur(22px)",
+    WebkitBackdropFilter: "blur(22px)",
+    borderRadius: 18,
+  } satisfies React.CSSProperties;
+
+  const glassStrong = {
+    background: "rgba(10,10,10,0.82)",
+    border: "1px solid rgba(255,255,255,0.11)",
+    backdropFilter: "blur(28px)",
+    WebkitBackdropFilter: "blur(28px)",
+    borderRadius: 20,
+  } satisfies React.CSSProperties;
 
   const labelStyle = "text-[10px] font-bold tracking-widest uppercase" as const;
 
@@ -269,79 +280,113 @@ export default function RewardVestPage() {
     .filter((card) => card.earned > 0 || card.points > 0);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
-      <div className="px-4 pt-12 pb-3">
-        <span className={labelStyle} style={{ color: "var(--green)" }}>RewardVest</span>
-        <h1 className="text-2xl font-bold text-white mt-0.5">AI Investment Advisor</h1>
-        <p className="text-xs mt-0.5" style={{ color: "var(--text-2)" }}>
-          Exact SmartSwipe rewards feed directly into your investable balance.
+    <div className="min-h-screen" style={{ position: "relative", zIndex: 1 }}>
+
+      {/* ── Header ── */}
+      <div style={{ padding: "32px 28px 0" }}>
+        <p className={labelStyle} style={{ color: "rgba(0,200,5,0.8)", marginBottom: 4 }}>RewardVest</p>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: "#fff", margin: 0, fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}>
+          AI Investment Advisor
+        </h1>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginTop: 4 }}>
+          SmartSwipe rewards flow directly into your investable balance
         </p>
       </div>
+
       <MarketTicker />
 
-      <div className="px-4 pt-4 pb-6 max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+      <div style={{ padding: "20px 28px 48px", maxWidth: 1200, margin: "0 auto" }}>
+
+        {/* ── Stat strip ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
           {[
-            { label: "This Month", value: `$${thisMonth.toFixed(2)}`, sub: "earned", color: "var(--green)" },
+            { label: "This Month", value: `$${thisMonth.toFixed(2)}`, sub: "earned", color: "rgba(0,200,5,0.9)" },
             { label: "Available to Invest", value: `$${uninvestedBalance.toFixed(2)}`, sub: "uninvested", color: "#60a5fa" },
             {
               label: "Portfolio Value",
               value: `$${livePortfolioValue.toFixed(2)}`,
               sub: portfolioGain >= 0 ? `+$${portfolioGain.toFixed(2)} gain` : `-$${Math.abs(portfolioGain).toFixed(2)} loss`,
               hint: marketStatusLabel,
-              color: portfolioGain >= 0 ? "var(--green)" : "var(--red)",
+              color: portfolioGain >= 0 ? "rgba(0,200,5,0.9)" : "#f87171",
             },
             { label: "Projected Annual", value: `$${projectedAnnual.toLocaleString()}`, sub: "at current rate", color: "#a78bfa" },
             { label: "10-Year Growth", value: `$${tenYearGrowth.toLocaleString()}`, sub: `at ${projectedReturn}% return`, color: "#fbbf24" },
-          ].map((stat, index) => (
+          ].map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 * index }}
-              className="p-4"
-              style={cardStyle}
+              transition={{ delay: 0.04 * i, type: "spring", stiffness: 380, damping: 28 }}
+              style={{ ...glass, padding: "16px 18px" }}
             >
-              <p className={`${labelStyle} mb-2`} style={{ color: "var(--text-2)" }}>{stat.label}</p>
-              <p className="text-xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-2)" }}>{stat.sub}</p>
+              <p className={labelStyle} style={{ color: "rgba(255,255,255,0.35)", marginBottom: 8 }}>{stat.label}</p>
+              <p style={{ fontSize: 20, fontWeight: 800, color: stat.color, fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}>
+                {stat.value}
+              </p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>{stat.sub}</p>
               {"hint" in stat && stat.hint && (
-                <p className="text-[10px] mt-2 font-semibold" style={{ color: marketStatusColor }}>
-                  {stat.hint}
-                </p>
+                <p style={{ fontSize: 10, color: marketStatusColor, fontWeight: 700, marginTop: 6 }}>{stat.hint}</p>
               )}
             </motion.div>
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-4 items-start">
-          <div className="lg:col-span-2 space-y-4 min-w-0">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <LiquidityDominanceChart marketRegime={aiAdvice?.marketRegime ?? null} />
-            </motion.div>
+        {/* ── Main grid ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 16, alignItems: "start" }}>
 
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <PortfolioLandscapeChart
-                allocations={displayAllocations}
-                marketData={marketData}
-                investableAmount={uninvestedBalance}
-                marketStatusLabel={marketLoading ? "Loading..." : marketStatusLabel}
-              />
-            </motion.div>
-          </div>
+          {/* Left — Liquidity chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            style={{ ...glassStrong, overflow: "hidden" }}
+          >
+            <LiquidityDominanceChart marketRegime={aiAdvice?.marketRegime ?? null} />
+          </motion.div>
 
-          <div className="space-y-4 min-w-0">
+          {/* Centre — Portfolio landscape */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.13 }}
+            style={{ ...glassStrong, overflow: "hidden" }}
+          >
+            <PortfolioLandscapeChart
+              allocations={displayAllocations}
+              marketData={marketData}
+              investableAmount={uninvestedBalance}
+              marketStatusLabel={marketLoading ? "Loading..." : marketStatusLabel}
+            />
+          </motion.div>
+
+          {/* Right sidebar */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {/* Portfolio / donut */}
             <AnimatePresence mode="wait">
               {showPortfolio ? (
-                <motion.div key="portfolio" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="p-5" style={cardStyle}>
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-white">{aiAdvice ? "AI Portfolio" : "Suggested Portfolio"}</h3>
-                    {aiAdvice && <span className="text-[10px] px-2 py-0.5 rounded-full border" style={{ color: "var(--green)", borderColor: "rgba(74,222,128,0.25)" }}>AI Generated</span>}
+                <motion.div
+                  key="portfolio"
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  style={{ ...glass, padding: "20px 20px 16px" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                      {aiAdvice ? "AI Portfolio" : "Suggested Portfolio"}
+                    </p>
+                    {aiAdvice && (
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(0,200,5,0.8)", background: "rgba(0,200,5,0.1)", border: "1px solid rgba(0,200,5,0.2)", borderRadius: 20, padding: "2px 8px" }}>
+                        AI
+                      </span>
+                    )}
                   </div>
-                  <p className="text-xs mb-5" style={{ color: "var(--text-2)" }}>
-                    Investing ${uninvestedBalance.toFixed(2)} of tracked reward value.
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 14 }}>
+                    Investing ${uninvestedBalance.toFixed(2)} of rewards
                   </p>
-                  <div className="flex justify-center mb-5 min-w-0">
+
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
                     <ReactECharts
                       option={{
                         backgroundColor: "transparent",
@@ -350,10 +395,10 @@ export default function RewardVestPage() {
                           type: "pie",
                           radius: ["48%", "72%"],
                           label: { show: false },
-                          data: displayAllocations.map((allocation, index) => ({
-                            value: allocation.percentage,
-                            name: allocation.ticker,
-                            itemStyle: { color: ALLOCATION_COLORS[index % ALLOCATION_COLORS.length] },
+                          data: displayAllocations.map((a, i) => ({
+                            value: a.percentage,
+                            name: a.ticker,
+                            itemStyle: { color: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] },
                           })),
                         }],
                       }}
@@ -362,79 +407,99 @@ export default function RewardVestPage() {
                       onChartReady={(chart) => { setTimeout(() => chart.resize(), 0); }}
                     />
                   </div>
-                  <div className="space-y-3">
-                    {displayAllocations.map((allocation, index) => (
-                      <div key={allocation.ticker} className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-sm" style={{ background: ALLOCATION_COLORS[index % ALLOCATION_COLORS.length] }} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-semibold text-white">{allocation.ticker}</span>
-                            <span className="text-sm font-bold text-white">${((allocation.percentage / 100) * uninvestedBalance).toFixed(0)}</span>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+                    {displayAllocations.map((a, i) => (
+                      <div key={a.ticker} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length], flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{a.ticker}</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>${((a.percentage / 100) * uninvestedBalance).toFixed(0)}</span>
                           </div>
-                          <div className="flex justify-between items-center mt-0.5">
-                            <span className="text-[10px] truncate" style={{ color: "var(--text-2)" }}>{allocation.description}</span>
-                            <span className="text-[10px] font-medium" style={{ color: ALLOCATION_COLORS[index % ALLOCATION_COLORS.length] }}>{allocation.percentage}%</span>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 1 }}>
+                            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.38)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.description}</span>
+                            <span style={{ fontSize: 10, fontWeight: 600, color: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length] }}>{a.percentage}%</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
+
                   <button
                     onClick={handleGenerate}
                     disabled={isGenerating}
-                    className="mt-5 w-full py-3 rounded-xl text-black font-semibold disabled:opacity-50"
-                    style={{ background: "var(--green)" }}
+                    style={{ width: "100%", padding: "11px 0", borderRadius: 12, background: "rgba(0,200,5,0.9)", color: "#000", fontSize: 13, fontWeight: 800, border: "none", cursor: isGenerating ? "not-allowed" : "pointer", opacity: isGenerating ? 0.5 : 1, marginBottom: 8 }}
                   >
-                    {isGenerating ? "Generating..." : "Generate AI Investment Split"}
+                    {isGenerating ? "Generating..." : "Generate AI Split"}
                   </button>
                   <button
                     onClick={handleInvest}
                     disabled={isInvesting || uninvestedBalance <= 0}
-                    className="mt-3 w-full py-3 rounded-xl font-semibold disabled:opacity-50 border"
-                    style={{ borderColor: "rgba(96,165,250,0.28)", color: "#60a5fa", background: "rgba(96,165,250,0.08)" }}
+                    style={{ width: "100%", padding: "11px 0", borderRadius: 12, background: "rgba(96,165,250,0.08)", color: "#60a5fa", fontSize: 13, fontWeight: 700, border: "1px solid rgba(96,165,250,0.25)", cursor: (isInvesting || uninvestedBalance <= 0) ? "not-allowed" : "pointer", opacity: (isInvesting || uninvestedBalance <= 0) ? 0.5 : 1 }}
                   >
-                    {isInvesting ? "Logging investment..." : investmentConfirmed ? "Investment Logged" : "I Invested This"}
+                    {isInvesting ? "Logging..." : investmentConfirmed ? "Investment Logged ✓" : "I Invested This"}
                   </button>
                 </motion.div>
               ) : (
-                <motion.div key="empty" className="h-64 rounded-2xl border border-dashed flex items-center justify-center" style={{ borderColor: "var(--border)" }}>
-                  <p style={{ color: "var(--text-2)" }}>{isGenerating ? "Analyzing market signals..." : "Generate a portfolio split"}</p>
+                <motion.div
+                  key="empty"
+                  style={{ ...glass, height: 240, display: "flex", alignItems: "center", justifyContent: "center", borderStyle: "dashed" }}
+                >
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+                    {isGenerating ? "Analyzing market signals..." : "Generate a portfolio split"}
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <div className="p-5" style={cardStyle}>
-              <p className={`${labelStyle} mb-2`} style={{ color: "var(--text-2)" }}>AI Insight</p>
-              <p className="text-sm leading-relaxed text-white/75">{aiAdvice?.summary ?? "RewardVest uses the exact value you have logged from SmartSwipe, then allocates only the uninvested portion into a suggested micro-portfolio."}</p>
+            {/* AI Insight */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.18 }}
+              style={{ ...glass, padding: "18px 20px" }}
+            >
+              <p className={labelStyle} style={{ color: "rgba(255,255,255,0.32)", marginBottom: 8 }}>AI Insight</p>
+              <p style={{ fontSize: 12, lineHeight: 1.65, color: "rgba(255,255,255,0.68)" }}>
+                {aiAdvice?.summary ?? "RewardVest uses the exact value you have logged from SmartSwipe, then allocates only the uninvested portion into a suggested micro-portfolio."}
+              </p>
               {aiAdvice?.insights?.length ? (
-                <div className="mt-4 space-y-2">
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
                   {aiAdvice.insights.slice(0, 3).map((insight) => (
-                    <p key={insight} className="text-xs" style={{ color: "var(--text-2)" }}>{insight}</p>
+                    <p key={insight} style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", lineHeight: 1.5 }}>{insight}</p>
                   ))}
                 </div>
               ) : null}
-              {aiError && <p className="mt-3 text-xs text-red-400">{aiError}</p>}
-              {investmentConfirmed && <p className="mt-3 text-xs" style={{ color: "var(--green)" }}>Investment tranche logged into WealthSplit.</p>}
-            </div>
+              {aiError && <p style={{ marginTop: 10, fontSize: 11, color: "#f87171" }}>{aiError}</p>}
+              {investmentConfirmed && <p style={{ marginTop: 10, fontSize: 11, color: "rgba(0,200,5,0.8)" }}>Investment tranche logged into WealthSplit.</p>}
+            </motion.div>
 
-            <div className="p-5" style={cardStyle}>
-              <p className={`${labelStyle} mb-3`} style={{ color: "var(--text-2)" }}>Earnings by Card</p>
+            {/* Earnings by card */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.22 }}
+              style={{ ...glass, padding: "18px 20px" }}
+            >
+              <p className={labelStyle} style={{ color: "rgba(255,255,255,0.32)", marginBottom: 12 }}>Earnings by Card</p>
               {rewardBreakdown.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--text-2)" }}>No logged card rewards yet. Run SmartSwipe and log a swipe first.</p>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>No logged rewards yet. Log a swipe in SmartSwipe first.</p>
               ) : (
-                <div className="space-y-3">
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {rewardBreakdown.map((card) => (
-                    <div key={card.id} className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{card.label}</p>
-                        <p className="text-[10px]" style={{ color: "var(--text-2)" }}>{card.points.toLocaleString()} points</p>
+                    <div key={card.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.label}</p>
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{card.points.toLocaleString()} pts</p>
                       </div>
-                      <span className="text-sm font-bold" style={{ color: "var(--green)" }}>${card.earned.toFixed(2)}</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(0,200,5,0.9)", whiteSpace: "nowrap" }}>${card.earned.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
+            </motion.div>
+
           </div>
         </div>
       </div>
