@@ -33,7 +33,10 @@ type StoreShape = {
   plaidUsers: Record<string, StoredPlaidUser>;
 };
 
-const STORE_PATH = path.join(process.cwd(), "data", "runtime", "plaid-store.json");
+const RUNTIME_DIR = process.env.VERCEL
+  ? "/tmp"
+  : path.join(process.cwd(), "data", "runtime");
+const STORE_PATH = path.join(RUNTIME_DIR, "plaid-store.json");
 
 const EMPTY_STORE: StoreShape = {
   plaidUsers: {},

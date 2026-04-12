@@ -34,7 +34,10 @@ type RewardsStore = {
   users: Record<string, UserRewardsLedger>;
 };
 
-const STORE_PATH = path.join(process.cwd(), "data", "runtime", "rewards-ledger.json");
+const RUNTIME_DIR = process.env.VERCEL
+  ? "/tmp"
+  : path.join(process.cwd(), "data", "runtime");
+const STORE_PATH = path.join(RUNTIME_DIR, "rewards-ledger.json");
 let storeWriteQueue: Promise<void> = Promise.resolve();
 
 const EMPTY_CARD_SNAPSHOT = (): CardRewardsSnapshot => ({
