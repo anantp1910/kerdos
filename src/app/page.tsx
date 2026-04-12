@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { motion, useMotionValue, animate } from "framer-motion";
-import Link from "next/link";
-import { TrendingUp, Wallet, Star, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { motion, useMotionValue, animate, AnimatePresence } from "framer-motion";
+import { TrendingUp, Wallet, Star, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CreditCard, { type CreditCardData } from "@/components/CreditCard";
+import PlaidConnect from "@/components/PlaidConnect";
 import { USER_CARDS } from "@/lib/userCards";
-import { getLinkedCardIds } from "@/lib/linkedCards";
+import { getLinkedCardIds, type LinkedCardMapping } from "@/lib/linkedCards";
 
 const STATS = [
   { label: "Cashback",      value: "$340",    delta: "+8.2%",  sub: "from last cycle",  icon: Wallet,     color: "var(--green)" },
@@ -27,6 +27,7 @@ const SPRING = { type: "spring" as const, stiffness: 420, damping: 38, mass: 1 }
 export default function HomePage() {
   const [cards, setCards]         = useState<CreditCardData[]>([]);
   const [linkedIds, setLinkedIds] = useState<string[] | null>(null);
+  const [showPlaid, setShowPlaid] = useState(false);
 
   // Looping carousel via MotionValue
   const x         = useMotionValue(0);
@@ -252,35 +253,102 @@ export default function HomePage() {
 
         {/* Add Card — centered below carousel, 1/3 card height */}
         <div className="flex justify-center shrink-0 mt-9">
-          <Link href="/plaid-link" target="_blank">
-            <motion.button
-              className="rounded-full flex items-center gap-2.5"
-              whileHover={{ scale: 1.04, boxShadow: "0 0 36px rgba(0,200,5,0.32), inset 0 1px 0 rgba(0,200,5,0.25)" }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          <motion.button
+            onClick={() => setShowPlaid(true)}
+            className="rounded-full flex items-center gap-2.5"
+            whileHover={{ scale: 1.04, boxShadow: "0 0 36px rgba(0,200,5,0.32), inset 0 1px 0 rgba(0,200,5,0.25)" }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            style={{
+              height: Math.round(CARD_WIDTH * 0.63 / 3) - 10,
+              paddingLeft: 36,
+              paddingRight: 36,
+              background: "rgba(0,200,5,0.15)",
+              border: "1px solid rgba(0,200,5,0.55)",
+              color: "var(--green)",
+              fontFamily: "var(--font-display)",
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow: "0 0 24px rgba(0,200,5,0.18), inset 0 1px 0 rgba(0,200,5,0.2)",
+              cursor: "pointer",
+            }}
+          >
+            <Plus size={13} strokeWidth={3} />
+            Add Card
+          </motion.button>
+        </div>
+
+        {/* Plaid modal overlay */}
+        <AnimatePresence>
+          {showPlaid && (
+            <motion.div
+              key="plaid-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={(e) => { if (e.target === e.currentTarget) setShowPlaid(false); }}
               style={{
-                height: Math.round(CARD_WIDTH * 0.63 / 3) - 10,
-                paddingLeft: 36,
-                paddingRight: 36,
-                background: "rgba(0,200,5,0.15)",
-                border: "1px solid rgba(0,200,5,0.55)",
-                color: "var(--green)",
-                fontFamily: "var(--font-display)",
-                fontSize: 11,
-                fontWeight: 900,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                boxShadow: "0 0 24px rgba(0,200,5,0.18), inset 0 1px 0 rgba(0,200,5,0.2)",
-                cursor: "pointer",
+                position: "fixed", inset: 0, zIndex: 200,
+                background: "rgba(0,0,0,0.72)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                padding: 24,
               }}
             >
-              <Plus size={13} strokeWidth={3} />
-              Add Card
-            </motion.button>
-          </Link>
-        </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.94, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 12 }}
+                transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                style={{
+                  width: "100%", maxWidth: 400,
+                  background: "rgba(14,14,14,0.95)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 22,
+                  padding: 28,
+                  position: "relative",
+                }}
+              >
+                {/* Close */}
+                <button
+                  onClick={() => setShowPlaid(false)}
+                  style={{
+                    position: "absolute", top: 16, right: 16,
+                    background: "rgba(255,255,255,0.06)", border: "none",
+                    borderRadius: "50%", width: 30, height: 30,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", color: "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  <X size={14} />
+                </button>
+
+                <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.2em", color: "rgba(0,200,5,0.8)", textTransform: "uppercase", marginBottom: 6, fontFamily: "var(--font-display)" }}>
+                  Kerdos × Plaid
+                </p>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: "0 0 4px" }}>
+                  Connect your cards
+                </h2>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 22 }}>
+                  Link your credit cards for personalised recommendations
+                </p>
+
+                <PlaidConnect
+                  onComplete={(mappings: LinkedCardMapping[]) => {
+                    setLinkedIds(mappings.map(m => m.cardId));
+                    setShowPlaid(false);
+                  }}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* ── Band 3: Stats ── */}
