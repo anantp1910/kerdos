@@ -303,8 +303,8 @@ export default function HomePage() {
               whileTap={{ scale: 0.98 }}
               transition={{ delay: 0.15 + i * 0.05, type: "spring", stiffness: 400, damping: 28 }}
               className="flex-1 flex flex-col items-center justify-center gap-1.5"
-              style={{ cursor: "pointer" }}
               style={{
+                cursor: "pointer",
                 maxHeight: "72%",
                 padding: "12px 20px",
                 background: "rgba(255,255,255,0.04)",
