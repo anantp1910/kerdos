@@ -2,16 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import ReactECharts from 'echarts-for-react';
 import MarketTicker from "@/components/MarketTicker";
 import { USER_CARDS } from "@/lib/userCards";
+import { getTranchesGroupedByMonth } from "@/lib/investmentStore";
 
 const GROUP_MEMBERS = [
   { id: 'u1', name: 'Arjun', avatar: 'AJ', owes:  128.5,  cardSuggestion: 'Amex Gold'      },
@@ -82,7 +76,7 @@ const GROUP_EXPENSES: SplitItem[] = [
 type ApiCard = { id: string; cardName: string; cardIssuer: string; cardNetwork: string; annualFee: number | null; pointValuation: number | null; isCashback: boolean; rewardRates: Record<string, number> };
 
 export default function WealthSplitPage() {
-  const [activeTab, setActiveTab] = useState<"overview" | "splits" | "cards">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "investments" | "splits" | "cards">("overview");
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
   const [apiCards, setApiCards] = useState<ApiCard[]>([]);
 
@@ -144,8 +138,8 @@ export default function WealthSplitPage() {
           </motion.div>
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-8 p-1 bg-white/5 rounded-xl w-fit">
-            {(["overview", "splits", "cards"] as const).map((tab) => (
+          <div className="flex gap-2 mb-8 p-1 bg-white/5 rounded-xl w-fit flex-wrap">
+            {(["overview", "investments", "splits", "cards"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -155,7 +149,7 @@ export default function WealthSplitPage() {
                     : "text-white/40 hover:text-white/60"
                 }`}
               >
-                {tab === "overview" ? "📊 Overview" : tab === "splits" ? "🤝 Group Splits" : "💳 Cards"}
+                {tab === "overview" ? "📊 Overview" : tab === "investments" ? "📈 Investments" : tab === "splits" ? "🤝 Group Splits" : "💳 Cards"}
               </button>
             ))}
           </div>
@@ -217,38 +211,120 @@ export default function WealthSplitPage() {
                       </span>
                     </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={MONTHLY_DATA} barGap={4}>
-                      <XAxis
-                        dataKey="month"
-                        tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v) => `$${v}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          background: "#1a1a2e",
-                          border: "1px solid rgba(255,255,255,0.1)",
-                          borderRadius: "8px",
-                          color: "white",
-                          fontSize: "12px",
-                        }}
-                        formatter={(v, name) => [
-                          `$${v}`,
-                          String(name).charAt(0).toUpperCase() + String(name).slice(1),
-                        ]}
-                      />
-                      <Bar dataKey="rewards" fill="#4ade80" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="savings" fill="#60a5fa" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="investment" fill="#a78bfa" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div style={{ height: '220px', width: '100%' }}>
+                    <ReactECharts
+                      option={{
+                        backgroundColor: 'transparent',
+                        grid: {
+                          left: '3%',
+                          right: '4%',
+                          bottom: '3%',
+                          top: '10%',
+                          containLabel: true
+                        },
+                        xAxis: {
+                          type: 'category',
+                          data: MONTHLY_DATA.map(d => d.month),
+                          axisLine: { show: false },
+                          axisTick: { show: false },
+                          axisLabel: {
+                            color: 'rgba(255,255,255,0.3)',
+                            fontSize: 11
+                          }
+                        },
+                        yAxis: {
+                          type: 'value',
+                          axisLine: { show: false },
+                          axisTick: { show: false },
+                          axisLabel: {
+                            color: 'rgba(255,255,255,0.3)',
+                            fontSize: 11,
+                            formatter: (value: number) => `$${value}`
+                          },
+                          splitLine: {
+                            lineStyle: {
+                              color: 'rgba(255,255,255,0.06)',
+                              type: 'dashed'
+                            }
+                          }
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(26,26,46,0.95)',
+                          borderColor: 'rgba(255,255,255,0.1)',
+                          borderRadius: 8,
+                          textStyle: {
+                            color: 'white',
+                            fontSize: 12
+                          },
+                          formatter: (params: any) => {
+                            if (Array.isArray(params)) {
+                              return params.map(p => `${p.seriesName}: $${p.value}`).join('<br/>');
+                            }
+                            return `${params.seriesName}: $${params.value}`;
+                          }
+                        },
+                        legend: {
+                          show: false
+                        },
+                        series: [
+                          {
+                            name: 'Rewards',
+                            type: 'bar',
+                            data: MONTHLY_DATA.map(d => d.rewards),
+                            itemStyle: {
+                              color: '#4ade80',
+                              borderRadius: [4, 4, 0, 0]
+                            },
+                            animationDelay: (idx: number) => idx * 100,
+                            animationDuration: 1000,
+                            emphasis: {
+                              itemStyle: {
+                                shadowColor: 'rgba(74,222,128,0.5)',
+                                shadowBlur: 10
+                              }
+                            }
+                          },
+                          {
+                            name: 'Savings',
+                            type: 'bar',
+                            data: MONTHLY_DATA.map(d => d.savings),
+                            itemStyle: {
+                              color: '#60a5fa',
+                              borderRadius: [4, 4, 0, 0]
+                            },
+                            animationDelay: (idx: number) => idx * 100 + 200,
+                            animationDuration: 1000,
+                            emphasis: {
+                              itemStyle: {
+                                shadowColor: 'rgba(96,165,250,0.5)',
+                                shadowBlur: 10
+                              }
+                            }
+                          },
+                          {
+                            name: 'Investment',
+                            type: 'bar',
+                            data: MONTHLY_DATA.map(d => d.investment),
+                            itemStyle: {
+                              color: '#a78bfa',
+                              borderRadius: [4, 4, 0, 0]
+                            },
+                            animationDelay: (idx: number) => idx * 100 + 400,
+                            animationDuration: 1000,
+                            emphasis: {
+                              itemStyle: {
+                                shadowColor: 'rgba(167,139,250,0.5)',
+                                shadowBlur: 10
+                              }
+                            }
+                          }
+                        ],
+                        animationEasing: 'elasticOut',
+                        animationDuration: 1500
+                      }}
+                      style={{ height: '100%', width: '100%' }}
+                    />
+                  </div>
                 </div>
 
                 {/* Breakeven tracker */}
@@ -332,6 +408,89 @@ export default function WealthSplitPage() {
                     </div>
                   ))}
                 </div>
+              </motion.div>
+            )}
+
+            {/* INVESTMENTS TAB */}
+            {activeTab === "investments" && (
+              <motion.div
+                key="investments"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-6"
+              >
+                {(() => {
+                  const groups = getTranchesGroupedByMonth();
+                  if (groups.length === 0) {
+                    return (
+                      <div className="p-8 rounded-2xl bg-white/[0.03] border border-white/8 text-center">
+                        <p className="text-white/30 text-sm mb-1">No investments logged yet.</p>
+                        <p className="text-white/20 text-xs">After generating a portfolio in RewardVest, tap "✓ I Invested This" to track it here.</p>
+                      </div>
+                    );
+                  }
+                  return groups.map((group) => {
+                    const gain = group.currentValue - group.total;
+                    return (
+                      <motion.div
+                        key={group.label}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-6 rounded-2xl bg-white/[0.03] border border-white/8"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="font-semibold text-white">{group.label}</h3>
+                            <p className="text-xs text-white/40">{group.tranches.length} tranche{group.tranches.length !== 1 ? "s" : ""}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-purple-400">${group.currentValue.toFixed(2)}</p>
+                            <p className="text-xs" style={{ color: gain >= 0 ? "#4ade80" : "#f87171" }}>
+                              {gain >= 0 ? "+" : "−"}${Math.abs(gain).toFixed(2)} ({gain >= 0 ? "+" : "−"}{group.total > 0 ? Math.abs((gain / group.total) * 100).toFixed(2) : "0.00"}%)
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {group.tranches.map((t) => {
+                            const tv = t.amount * Math.pow(1 + t.blendedReturn / 100, (Date.now() - new Date(t.date).getTime()) / (1000 * 60 * 60 * 24 * 365));
+                            const tGain = tv - t.amount;
+                            return (
+                              <div key={t.id} className="p-3 rounded-xl bg-white/5 border border-white/8">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <span className="text-sm font-semibold text-white">${t.amount.toFixed(2)}</span>
+                                    <span className="text-xs text-white/40 ml-2">invested {t.date}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-sm font-bold text-purple-400">${tv.toFixed(2)}</span>
+                                    <span className="text-xs ml-1.5" style={{ color: tGain >= 0 ? "#4ade80" : "#f87171" }}>
+                                      {tGain >= 0 ? "+" : "−"}${Math.abs(tGain).toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {t.allocations.map((a) => (
+                                    <span key={a.ticker} className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/60">
+                                      {a.ticker} {a.pct}%
+                                    </span>
+                                  ))}
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-400/10 text-purple-400">
+                                    {t.blendedReturn.toFixed(1)}% blended
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-white/8 flex justify-between text-xs text-white/40">
+                          <span>Total invested: <span className="text-white/60 font-medium">${group.total.toFixed(2)}</span></span>
+                          <span>Current value: <span className="text-purple-400 font-medium">${group.currentValue.toFixed(2)}</span></span>
+                        </div>
+                      </motion.div>
+                    );
+                  });
+                })()}
               </motion.div>
             )}
 
