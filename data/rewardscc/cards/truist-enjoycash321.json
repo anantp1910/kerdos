@@ -1,0 +1,67 @@
+{
+  "id": "truist-enjoycash321",
+  "cardKey": "truist-enjoycash321",
+  "cardName": "Truist Enjoy Cash (3-2-1%)",
+  "cardIssuer": "Truist",
+  "cardNetwork": "Visa",
+  "annualFee": 0,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "cashback",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 2,
+    "travel": 1,
+    "gas": 3,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Multi Category",
+      "spendBonusCategoryName": "Gas Stations",
+      "spendBonusCategoryId": 1455345350,
+      "spendBonusCategoryGroup": "Auto",
+      "spendBonusSubcategoryGroup": "All Gas Stations",
+      "spendBonusDesc": "3% cash back on gas and EV charging",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 1000,
+      "spendLimitResetPeriod": "Month"
+    },
+    {
+      "spendBonusCategoryType": "Multi Category",
+      "spendBonusCategoryName": "Grocery Stores",
+      "spendBonusCategoryId": 1132334901,
+      "spendBonusCategoryGroup": "Shopping",
+      "spendBonusSubcategoryGroup": "Grocery",
+      "spendBonusDesc": "2% cash back on groceries and utilities (up to the combined $1,000 monthly spend cap)",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 1000,
+      "spendLimitResetPeriod": "Month"
+    },
+    {
+      "spendBonusCategoryType": "Multi Category",
+      "spendBonusCategoryName": "Utilities",
+      "spendBonusCategoryId": 1895002328,
+      "spendBonusCategoryGroup": "Services",
+      "spendBonusSubcategoryGroup": "Utilities",
+      "spendBonusDesc": "2% cash back on groceries and utilities (up to the combined $1,000 monthly spend cap)",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 1000,
+      "spendLimitResetPeriod": "Month"
+    }
+  ]
+}

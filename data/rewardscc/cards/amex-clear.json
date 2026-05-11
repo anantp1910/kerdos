@@ -1,0 +1,21 @@
+{
+  "id": "amex-clear",
+  "cardKey": "amex-clear",
+  "cardName": "Clear from American Express",
+  "cardIssuer": "American Express",
+  "cardNetwork": "American Express",
+  "annualFee": 0,
+  "pointValuation": 0,
+  "isCashback": false,
+  "baseSpendEarnCurrency": "",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 1,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": []
+}

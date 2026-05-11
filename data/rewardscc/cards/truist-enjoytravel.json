@@ -1,0 +1,67 @@
+{
+  "id": "truist-enjoytravel",
+  "cardKey": "truist-enjoytravel",
+  "cardName": "Truist Enjoy Travel",
+  "cardIssuer": "Truist",
+  "cardNetwork": "Visa",
+  "annualFee": 0,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "points",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 2,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/2113631795.png",
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Airfare",
+      "spendBonusCategoryName": "Airfare",
+      "spendBonusCategoryId": 2013874334,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "All Airfare",
+      "spendBonusDesc": "Earn 2x miles on airfare",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Car Rentals",
+      "spendBonusCategoryName": "Car Rentals",
+      "spendBonusCategoryId": 1766781107,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Car Rental",
+      "spendBonusDesc": "Earn 2x miles on car rentals",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Hotels",
+      "spendBonusCategoryName": "Hotels",
+      "spendBonusCategoryId": 164006704,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Hotel",
+      "spendBonusDesc": "Earn 2x miles on hotels",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "id": "capitalone-venture",
+  "cardKey": "capitalone-venture",
+  "cardName": "Venture Rewards",
+  "cardIssuer": "Capital One",
+  "cardNetwork": "Mastercard",
+  "annualFee": 95,
+  "pointValuation": 1.8,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "points",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 5,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Car Rentals (Capital One)",
+      "spendBonusCategoryName": "Car Rentals (Capital One)",
+      "spendBonusCategoryId": 670145462,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Travel Agency - Car Rental",
+      "spendBonusDesc": "Earn 5X miles on rental cars booked through Capital One Travel",
+      "earnMultiplier": 5,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Hotels (Capital One)",
+      "spendBonusCategoryName": "Hotels (Capital One)",
+      "spendBonusCategoryId": 1517218866,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Travel Agency - Hotel",
+      "spendBonusDesc": "Earn 5X miles on hotels booked through Capital One Travel",
+      "earnMultiplier": 5,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "id": "amex-bluecasheveryday",
+  "cardKey": "amex-bluecasheveryday",
+  "cardName": "Blue Cash Everyday®",
+  "cardIssuer": "American Express",
+  "cardNetwork": "American Express",
+  "annualFee": 0,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "cashback",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 3,
+    "travel": 1,
+    "gas": 3,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/1960784516.png",
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Gas Stations",
+      "spendBonusCategoryName": "Gas Stations",
+      "spendBonusCategoryId": 1455345350,
+      "spendBonusCategoryGroup": "Auto",
+      "spendBonusSubcategoryGroup": "All Gas Stations",
+      "spendBonusDesc": "Earn 3% cash back on gas at U.S. gas stations, on up to $6,000 per calendar year in purchases (then 1%)",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 6000,
+      "spendLimitResetPeriod": "Year"
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Grocery Stores",
+      "spendBonusCategoryName": "Grocery Stores",
+      "spendBonusCategoryId": 1132334901,
+      "spendBonusCategoryGroup": "Shopping",
+      "spendBonusSubcategoryGroup": "Grocery",
+      "spendBonusDesc": "Earn 3% cash back at U.S. supermarkets on eligible purchases, on up to $6,000 per calendar year in purchases, (then 1%)",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 6000,
+      "spendLimitResetPeriod": "Year"
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Online Shopping",
+      "spendBonusCategoryName": "Online Shopping",
+      "spendBonusCategoryId": 158645550,
+      "spendBonusCategoryGroup": "Shopping",
+      "spendBonusSubcategoryGroup": "All Online Shopping",
+      "spendBonusDesc": "Earn 3% cash back on U.S. online retail purchases, on up to $6,000 per calendar year in purchases (then 1%)",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 6000,
+      "spendLimitResetPeriod": "Year"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "id": "cardless-biltpalladium",
+  "cardKey": "cardless-biltpalladium",
+  "cardName": "Bilt Palladium Card",
+  "cardIssuer": "First Electronic Bank",
+  "cardNetwork": "Mastercard",
+  "annualFee": 495,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "points",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 4,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/811136785.png",
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Lyft",
+      "spendBonusCategoryName": "Lyft",
+      "spendBonusCategoryId": 606097,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Rideshare",
+      "spendBonusDesc": "4X points on Lyft rides",
+      "earnMultiplier": 4,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Walgreens",
+      "spendBonusCategoryName": "Walgreens",
+      "spendBonusCategoryId": 1893120956,
+      "spendBonusCategoryGroup": "Shopping",
+      "spendBonusSubcategoryGroup": "Drugstore",
+      "spendBonusDesc": "3X+ points at Walgreens",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

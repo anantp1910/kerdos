@@ -1,0 +1,21 @@
+{
+  "id": "synchrony-plusworld",
+  "cardKey": "synchrony-plusworld",
+  "cardName": "Synchrony Plus World Mastercard®",
+  "cardIssuer": "Synchrony Bank",
+  "cardNetwork": "Mastercard",
+  "annualFee": 0,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "cashback",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 1,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": []
+}

@@ -1,0 +1,52 @@
+{
+  "id": "truist-enjoybeyond",
+  "cardKey": "truist-enjoybeyond",
+  "cardName": "Truist Enjoy Beyond",
+  "cardIssuer": "Truist",
+  "cardNetwork": "Visa",
+  "annualFee": 195,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "points",
+  "rewardRates": {
+    "dining": 2,
+    "groceries": 1,
+    "travel": 3,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Dining",
+      "spendBonusCategoryName": "Dining",
+      "spendBonusCategoryId": 160378660,
+      "spendBonusCategoryGroup": "Dining",
+      "spendBonusSubcategoryGroup": "All Dining",
+      "spendBonusDesc": "2x on dining",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Travel",
+      "spendBonusCategoryName": "Travel",
+      "spendBonusCategoryId": 176638649,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "All Travel",
+      "spendBonusDesc": "3x on travel purchases",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

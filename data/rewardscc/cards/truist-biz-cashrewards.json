@@ -1,0 +1,67 @@
+{
+  "id": "truist-biz-cashrewards",
+  "cardKey": "truist-biz-cashrewards",
+  "cardName": "Truist Business Cash Rewards",
+  "cardIssuer": "Truist",
+  "cardNetwork": "Visa",
+  "annualFee": 0,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "cashback",
+  "rewardRates": {
+    "dining": 2,
+    "groceries": 1,
+    "travel": 1,
+    "gas": 3,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/1250610320.png",
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Multi Category",
+      "spendBonusCategoryName": "Dining",
+      "spendBonusCategoryId": 160378660,
+      "spendBonusCategoryGroup": "Dining",
+      "spendBonusSubcategoryGroup": "All Dining",
+      "spendBonusDesc": "2% at restaurants and office supply stores, up to $2,000 in combined spend in 2% and 3% categories per month",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 2000,
+      "spendLimitResetPeriod": "Month"
+    },
+    {
+      "spendBonusCategoryType": "Multi Category",
+      "spendBonusCategoryName": "Gas Stations",
+      "spendBonusCategoryId": 1455345350,
+      "spendBonusCategoryGroup": "Auto",
+      "spendBonusSubcategoryGroup": "All Gas Stations",
+      "spendBonusDesc": "3% cash back on gas, up to $2,000 in combined spend in 2% and 3% categories per month",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 2000,
+      "spendLimitResetPeriod": "Month"
+    },
+    {
+      "spendBonusCategoryType": "Multi Category",
+      "spendBonusCategoryName": "Office Supplies",
+      "spendBonusCategoryId": 1055848074,
+      "spendBonusCategoryGroup": "Shopping",
+      "spendBonusSubcategoryGroup": "Office Supplies",
+      "spendBonusDesc": "2% at restaurants and office supply stores, up to $2,000 in combined spend in 2% and 3% categories per month",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 2000,
+      "spendLimitResetPeriod": "Month"
+    }
+  ]
+}

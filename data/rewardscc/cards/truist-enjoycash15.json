@@ -1,0 +1,21 @@
+{
+  "id": "truist-enjoycash15",
+  "cardKey": "truist-enjoycash15",
+  "cardName": "Truist Enjoy Cash (1.5%)",
+  "cardIssuer": "Truist",
+  "cardNetwork": "Visa",
+  "annualFee": 0,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "cashback",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 1,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": []
+}

@@ -1,0 +1,21 @@
+{
+  "id": "amex-centurion",
+  "cardKey": "amex-centurion",
+  "cardName": "Centurion® Card from American Express",
+  "cardIssuer": "American Express",
+  "cardNetwork": "American Express",
+  "annualFee": 5000,
+  "pointValuation": 2.2,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "points",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 1,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": []
+}

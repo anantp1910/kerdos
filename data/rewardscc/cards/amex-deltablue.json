@@ -1,0 +1,52 @@
+{
+  "id": "amex-deltablue",
+  "cardKey": "amex-deltablue",
+  "cardName": "Delta SkyMiles® Blue American Express",
+  "cardIssuer": "American Express",
+  "cardNetwork": "American Express",
+  "annualFee": 0,
+  "pointValuation": 1.2,
+  "isCashback": false,
+  "baseSpendEarnCurrency": "miles",
+  "rewardRates": {
+    "dining": 2,
+    "groceries": 1,
+    "travel": 2,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/175486701.png",
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Delta Airlines",
+      "spendBonusCategoryName": "Delta Airlines",
+      "spendBonusCategoryId": 1995164488,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Airfare",
+      "spendBonusDesc": "2X miles on Delta purchases made directly with Delta",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Dining",
+      "spendBonusCategoryName": "Dining",
+      "spendBonusCategoryId": 160378660,
+      "spendBonusCategoryGroup": "Dining",
+      "spendBonusSubcategoryGroup": "All Dining",
+      "spendBonusDesc": "2X miles on dining at restaurants, including takeout and delivery in the U.S.",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

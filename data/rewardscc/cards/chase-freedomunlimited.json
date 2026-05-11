@@ -1,0 +1,67 @@
+{
+  "id": "chase-freedomunlimited",
+  "cardKey": "chase-freedomunlimited",
+  "cardName": "Chase Freedom Unlimited® Credit Card",
+  "cardIssuer": "Chase",
+  "cardNetwork": "Visa",
+  "annualFee": 0,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "cashback",
+  "rewardRates": {
+    "dining": 3,
+    "groceries": 1,
+    "travel": 5,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/1435429562.png",
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - All Travel (Ultimate Rewards)",
+      "spendBonusCategoryName": "All Travel (Ultimate Rewards)",
+      "spendBonusCategoryId": 605657763,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Travel Agency",
+      "spendBonusDesc": "Earn 5% on travel purchased through Chase Ultimate Rewards",
+      "earnMultiplier": 5,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Dining",
+      "spendBonusCategoryName": "Dining",
+      "spendBonusCategoryId": 160378660,
+      "spendBonusCategoryGroup": "Dining",
+      "spendBonusSubcategoryGroup": "All Dining",
+      "spendBonusDesc": "Earn 3% on dining at restaurants, including takeout and eligible delivery services",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Drugstores",
+      "spendBonusCategoryName": "Drugstores",
+      "spendBonusCategoryId": 1096261883,
+      "spendBonusCategoryGroup": "Shopping",
+      "spendBonusSubcategoryGroup": "All Drugstores",
+      "spendBonusDesc": "Earn 3% on drugstore purchases",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

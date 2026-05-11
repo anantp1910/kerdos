@@ -1,0 +1,82 @@
+{
+  "id": "usbank-altitudego",
+  "cardKey": "usbank-altitudego",
+  "cardName": "U.S. Bank Altitude® Go Visa Signature®",
+  "cardIssuer": "U.S. Bank",
+  "cardNetwork": "Visa",
+  "annualFee": 0,
+  "pointValuation": 1.5,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "points",
+  "rewardRates": {
+    "dining": 4,
+    "groceries": 2,
+    "travel": 1,
+    "gas": 2,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/480304152.png",
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Dining",
+      "spendBonusCategoryName": "Dining",
+      "spendBonusCategoryId": 160378660,
+      "spendBonusCategoryGroup": "Dining",
+      "spendBonusSubcategoryGroup": "All Dining",
+      "spendBonusDesc": "4X points on dining, takeout and restaurant delivery",
+      "earnMultiplier": 4,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Gas Stations",
+      "spendBonusCategoryName": "Gas Stations",
+      "spendBonusCategoryId": 1455345350,
+      "spendBonusCategoryGroup": "Auto",
+      "spendBonusSubcategoryGroup": "All Gas Stations",
+      "spendBonusDesc": "2X points at gas stations and EV charging stations",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Grocery Stores",
+      "spendBonusCategoryName": "Grocery Stores",
+      "spendBonusCategoryId": 1132334901,
+      "spendBonusCategoryGroup": "Shopping",
+      "spendBonusSubcategoryGroup": "Grocery",
+      "spendBonusDesc": "2X points at grocery stores and grocery delivery",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Streaming Services",
+      "spendBonusCategoryName": "Streaming Services",
+      "spendBonusCategoryId": 248970942,
+      "spendBonusCategoryGroup": "Telecom",
+      "spendBonusSubcategoryGroup": "Media",
+      "spendBonusDesc": "2X points on streaming services",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

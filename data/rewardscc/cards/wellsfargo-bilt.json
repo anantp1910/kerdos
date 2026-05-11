@@ -1,0 +1,82 @@
+{
+  "id": "wellsfargo-bilt",
+  "cardKey": "wellsfargo-bilt",
+  "cardName": "Bilt Mastercard®",
+  "cardIssuer": "Wells Fargo",
+  "cardNetwork": "Mastercard",
+  "annualFee": 0,
+  "pointValuation": 1.8,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "points",
+  "rewardRates": {
+    "dining": 3,
+    "groceries": 1,
+    "travel": 2,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": null,
+  "spendBonusCategory": [
+    {
+      "spendBonusCategoryType": "Single Category - Dining",
+      "spendBonusCategoryName": "Dining",
+      "spendBonusCategoryId": 160378660,
+      "spendBonusCategoryGroup": "Dining",
+      "spendBonusSubcategoryGroup": "All Dining",
+      "spendBonusDesc": "3X points on dining purchases (double points on the first day of every month)",
+      "earnMultiplier": 3,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Lyft",
+      "spendBonusCategoryName": "Lyft",
+      "spendBonusCategoryId": 606097,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "Rideshare",
+      "spendBonusDesc": "5X points on Lyft rideshare once you’ve linked your Bilt and Lyft accounts and pay with the Bilt Mastercard",
+      "earnMultiplier": 1,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Rent",
+      "spendBonusCategoryName": "Rent",
+      "spendBonusCategoryId": 617233,
+      "spendBonusCategoryGroup": "Rent",
+      "spendBonusSubcategoryGroup": "Rent",
+      "spendBonusDesc": "1X points on rent up to 100,000 points each calendar year",
+      "earnMultiplier": 1,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 1,
+      "spendLimit": 100000,
+      "spendLimitResetPeriod": "Year"
+    },
+    {
+      "spendBonusCategoryType": "Single Category - Travel",
+      "spendBonusCategoryName": "Travel",
+      "spendBonusCategoryId": 176638649,
+      "spendBonusCategoryGroup": "Travel",
+      "spendBonusSubcategoryGroup": "All Travel",
+      "spendBonusDesc": "2X points on travel booked directly with airlines, hotels, car rental agencies, cruise lines, or through the Bilt Travel Portal  (double points on the first day of every month)",
+      "earnMultiplier": 2,
+      "isDateLimit": 0,
+      "limitBeginDate": "",
+      "limitEndDate": "",
+      "isSpendLimit": 0,
+      "spendLimit": 0,
+      "spendLimitResetPeriod": ""
+    }
+  ]
+}

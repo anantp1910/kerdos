@@ -1,0 +1,21 @@
+{
+  "id": "truist-biz-premium",
+  "cardKey": "truist-biz-premium",
+  "cardName": "Truist Business Premium",
+  "cardIssuer": "Truist",
+  "cardNetwork": "Visa",
+  "annualFee": 299,
+  "pointValuation": 1,
+  "isCashback": true,
+  "baseSpendEarnCurrency": "cashback",
+  "rewardRates": {
+    "dining": 1,
+    "groceries": 1,
+    "travel": 1,
+    "gas": 1,
+    "entertainment": 1,
+    "other": 1
+  },
+  "imageUrl": "https://rewardsccapi.blob.core.windows.net/hun1956/1238661487.png",
+  "spendBonusCategory": []
+}
